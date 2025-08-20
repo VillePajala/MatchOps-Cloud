@@ -23,12 +23,12 @@ export const handlers = [
   }),
 
   http.post(`${SUPABASE_URL}/rest/v1/*`, async ({ request }) => {
-    const body = await request.json();
+    const body = await request.json() as Record<string, unknown>;
     return HttpResponse.json({ id: 'new-id', ...body });
   }),
 
   http.patch(`${SUPABASE_URL}/rest/v1/*`, async ({ request }) => {
-    const body = await request.json();
+    const body = await request.json() as Record<string, unknown>;
     return HttpResponse.json({ id: 'updated-id', ...body });
   }),
 
