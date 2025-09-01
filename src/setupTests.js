@@ -95,6 +95,45 @@ window.prompt = jest.fn();
 global.URL.createObjectURL = jest.fn(() => 'blob:mockedurl/123');
 global.URL.revokeObjectURL = jest.fn();
 
+// Mock DataTransfer for drag and drop tests
+global.DataTransfer = class DataTransfer {
+  constructor() {
+    this.data = {};
+    this.types = [];
+  }
+  
+  setData(format, data) {
+    this.data[format] = data;
+    if (!this.types.includes(format)) {
+      this.types.push(format);
+    }
+  }
+  
+  getData(format) {
+    return this.data[format] || '';
+  }
+  
+  clearData(format) {
+    if (format) {
+      delete this.data[format];
+      this.types = this.types.filter(type => type !== format);
+    } else {
+      this.data = {};
+      this.types = [];
+    }
+  }
+};
+
+// Mock DragEvent to include dataTransfer
+const originalCreateEvent = document.createEvent;
+document.createEvent = function(eventType) {
+  const event = originalCreateEvent.call(this, eventType);
+  if (eventType === 'DragEvent' || event.type === 'dragstart') {
+    event.dataTransfer = new global.DataTransfer();
+  }
+  return event;
+};
+
 // Restore all mocks after each test
 afterEach(() => {
   jest.restoreAllMocks();

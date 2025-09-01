@@ -12,7 +12,13 @@ jest.mock('@/utils/savedGames', () => ({
   deleteSavedGame: jest.fn(),
   saveGame: jest.fn(),
 }));
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  log: jest.fn(),
+}));
 
 // Mock child components
 jest.mock('@/components/ui/Button', () => {
@@ -93,7 +99,11 @@ describe('LoadGameModal', () => {
   const defaultProps = {
     isOpen: true,
     onClose: jest.fn(),
-    onGameLoad: jest.fn(),
+    savedGames: mockSavedGames,
+    onLoad: jest.fn(),
+    onDelete: jest.fn(),
+    onExportOneJson: jest.fn(),
+    onExportOneCsv: jest.fn(),
   };
 
   const mockAuth = {
@@ -111,36 +121,33 @@ describe('LoadGameModal', () => {
     (savedGames.deleteSavedGame as jest.Mock).mockResolvedValue(true);
     // (gameState.loadGameState as jest.Mock).mockResolvedValue(mockSavedGames['game-1']);
     
-    // Mock logger
-    (logger.debug as jest.Mock).mockImplementation(() => {});
-    (logger.error as jest.Mock).mockImplementation(() => {});
-    (logger.warn as jest.Mock).mockImplementation(() => {});
+    // Logger is already mocked above
   });
 
   describe('Basic Rendering', () => {
     it('should render modal when isOpen is true', () => {
       render(<LoadGameModal {...defaultProps} />);
       
-      expect(screen.getByTestId('modal-container')).toBeInTheDocument();
-      expect(screen.getByText('Load Game')).toBeInTheDocument();
+      expect(screen.getByText('Team Alpha')).toBeInTheDocument();
+      expect(screen.getByTestId('game-item-game-1')).toBeInTheDocument();
     });
 
     it('should not render modal when isOpen is false', () => {
       render(<LoadGameModal {...defaultProps} isOpen={false} />);
       
-      expect(screen.queryByTestId('modal-container')).not.toBeInTheDocument();
+      expect(screen.queryByText('Team Alpha')).not.toBeInTheDocument();
     });
 
     it('should render close button', () => {
       render(<LoadGameModal {...defaultProps} />);
       
-      expect(screen.getByTestId('modal-close')).toBeInTheDocument();
+      expect(screen.getByText('Close')).toBeInTheDocument();
     });
 
     it('should call onClose when close button is clicked', () => {
       render(<LoadGameModal {...defaultProps} />);
       
-      fireEvent.click(screen.getByTestId('modal-close'));
+      fireEvent.click(screen.getByText('Close'));
       
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
