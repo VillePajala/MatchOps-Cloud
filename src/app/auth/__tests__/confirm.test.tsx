@@ -6,7 +6,7 @@ import logger from '@/utils/logger';
 // Mock dependencies
 jest.mock('next/navigation');
 jest.mock('@/lib/supabase');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({ debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn(), }));
 
 // Mock the page component - we need to import it dynamically since it uses Suspense
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;

@@ -8,7 +8,12 @@ import type { Session } from '@supabase/supabase-js';
 jest.mock('../../lib/supabase');
 jest.mock('../../lib/security/rateLimiter');
 jest.mock('../../lib/security/sessionManager');
-jest.mock('../../utils/logger');
+jest.mock('../../utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+}));
 
 // Import after mocks
 import { supabase } from '../../lib/supabase';

@@ -8,7 +8,7 @@ import logger from '@/utils/logger';
 import type { Player, AppState } from '@/types';
 
 jest.mock('./typedStorageHelpers');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({ debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn(), }));
 
 describe('fixGameEventPlayerIds', () => {
   const mockGetTypedSavedGames = getTypedSavedGames as jest.MockedFunction<typeof getTypedSavedGames>;

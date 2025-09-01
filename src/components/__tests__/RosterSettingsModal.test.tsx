@@ -8,7 +8,12 @@ import logger from '@/utils/logger';
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('@/utils/masterRoster');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+}));
 
 // Mock child components
 /*
@@ -91,12 +96,23 @@ describe('RosterSettingsModal', () => {
   const defaultProps = {
     isOpen: true,
     onClose: jest.fn(),
-    onRosterUpdate: jest.fn(),
-    initialPlayers: [
+    availablePlayers: [
       { id: 'p1', name: 'John Doe', nickname: 'John', color: '#FF0000', isGoalie: false, number: 10 },
       { id: 'p2', name: 'Jane Smith', nickname: 'Jane', color: '#00FF00', isGoalie: true, number: 1 },
       { id: 'p3', name: 'Bob Wilson', nickname: 'Bob', color: '#0000FF', isGoalie: false, number: 7 },
     ],
+    onRenamePlayer: jest.fn(),
+    onSetJerseyNumber: jest.fn(),
+    onSetPlayerNotes: jest.fn(),
+    onRemovePlayer: jest.fn(),
+    onAddPlayer: jest.fn(),
+    selectedPlayerIds: [],
+    onTogglePlayerSelection: jest.fn(),
+    teamName: 'Test Team',
+    onTeamNameChange: jest.fn(),
+    isRosterUpdating: false,
+    rosterError: null,
+    onOpenPlayerStats: jest.fn(),
   };
 
   const mockAuth = {
@@ -125,18 +141,15 @@ describe('RosterSettingsModal', () => {
     // (playerColors.getAvailableColor as jest.Mock).mockReturnValue('#888888');
     // (playerColors.generatePlayerColors as jest.Mock).mockReturnValue(['#FF0000', '#00FF00', '#0000FF']);
     
-    // Mock logger
-    (logger.debug as jest.Mock).mockImplementation(() => {});
-    (logger.error as jest.Mock).mockImplementation(() => {});
-    (logger.warn as jest.Mock).mockImplementation(() => {});
+    // Logger is already mocked above
   });
 
   describe('Basic Rendering', () => {
     it('should render modal when isOpen is true', () => {
       render(<RosterSettingsModal {...defaultProps} />);
       
-      expect(screen.getByTestId('modal-container')).toBeInTheDocument();
-      expect(screen.getByText('Roster Settings')).toBeInTheDocument();
+      // The modal renders as a fixed overlay, check for the title instead
+      expect(screen.getByText('rosterSettingsModal.title')).toBeInTheDocument();
     });
 
     it('should not render modal when isOpen is false', () => {

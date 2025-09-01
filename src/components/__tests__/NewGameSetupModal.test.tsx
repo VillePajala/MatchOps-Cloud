@@ -84,12 +84,6 @@ jest.mock('@/components/ui/Select', () => {
 */
 
 describe('NewGameSetupModal', () => {
-  const defaultProps = {
-    isOpen: true,
-    onClose: jest.fn(),
-    onGameCreate: jest.fn(),
-  };
-
   const mockAuth = {
     user: { id: 'user-123' },
     isAuthenticated: true,
@@ -109,6 +103,21 @@ describe('NewGameSetupModal', () => {
     { id: 'p2', name: 'Jane Smith', nickname: 'Jane', color: '#00FF00', isGoalie: true, number: 1 },
     { id: 'p3', name: 'Bob Wilson', nickname: 'Bob', color: '#0000FF', isGoalie: false, number: 7 },
   ];
+
+  const defaultProps = {
+    isOpen: true,
+    initialPlayerSelection: null,
+    availablePlayers: mockMasterRoster,
+    demandFactor: 5,
+    onDemandFactorChange: jest.fn(),
+    onStart: jest.fn(),
+    onClose: jest.fn(),
+    seasons: [],
+    tournaments: [],
+    onSeasonCreate: undefined as UseMutationResult<Season, Error, any, unknown> | undefined,
+    onTournamentCreate: undefined as UseMutationResult<Tournament, Error, any, unknown> | undefined,
+    onGameCreate: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();

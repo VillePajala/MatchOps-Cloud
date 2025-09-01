@@ -16,7 +16,7 @@ import {
 } from '@/config/storageKeys';
 
 jest.mock('@/lib/storage');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({ debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn(), }));
 
 // Mock window.confirm
 const mockConfirm = jest.fn();

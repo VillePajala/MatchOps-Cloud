@@ -7,7 +7,7 @@ import logger from '@/utils/logger';
 // Mock dependencies
 jest.mock('next/navigation');
 jest.mock('@/lib/supabase');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({ debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn(), }));
 jest.mock('next/link', () => {
   return ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>

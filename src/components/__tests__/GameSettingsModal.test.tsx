@@ -8,7 +8,12 @@ import logger from '@/utils/logger';
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('@/utils/appSettings');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+}));
 
 // Mock child components
 jest.mock('@/components/ui/Button', () => {
