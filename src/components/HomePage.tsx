@@ -1355,6 +1355,9 @@ function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
     gameSessionState.currentPeriod, gameSessionState.gameStatus, gameSessionState.gameEvents,
     gameSessionState.timeElapsedInSeconds]);
 
+  // Extract complex expression for useEffect dependency array
+  const playersOnFieldCount = playersOnField?.length || 0;
+
   useEffect(() => {
     // Skip autosave during new game creation
     if (isCreatingNewGame) return;
@@ -1466,7 +1469,7 @@ function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
     gameSessionState.gameEvents, // New events (goals, subs, etc.)
     gameSessionState.currentPeriod, gameSessionState.gameStatus, // Period/status changes
     gameSessionState.selectedPlayerIds, // FIXED: Player roster selection changes
-    playersOnField?.length || 0, // Player changes on field (not positions)
+    playersOnFieldCount, // Player changes on field (not positions)
     gameSessionState.gameNotes, // Notes changes
     scheduleAutosave, hashGameState,
     // Include dependencies needed by the auto-save function but don't trigger on them
