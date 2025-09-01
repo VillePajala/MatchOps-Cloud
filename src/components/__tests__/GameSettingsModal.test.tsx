@@ -9,10 +9,12 @@ import logger from '@/utils/logger';
 jest.mock('@/context/AuthContext');
 jest.mock('@/utils/appSettings');
 jest.mock('@/utils/logger', () => ({
-  debug: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-  info: jest.fn(),
+  default: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+  }
 }));
 
 // Mock child components
@@ -115,6 +117,10 @@ describe('GameSettingsModal', () => {
       numberOfPeriods: 2,
       isTimerRunning: false,
     },
+    availablePlayers: [
+      { id: 'p1', name: 'Player 1', number: 1, position: 'forward' },
+      { id: 'p2', name: 'Player 2', number: 2, position: 'midfielder' },
+    ],
   };
 
   const mockAuth = {
@@ -148,10 +154,7 @@ describe('GameSettingsModal', () => {
     (appSettings.updateAppSettings as jest.Mock).mockResolvedValue(true);
     // (gameState.updateGameSettings as jest.Mock).mockResolvedValue(true);
     
-    // Mock logger methods if they exist
-    if (logger.debug) (logger.debug as jest.Mock).mockImplementation(() => {});
-    if (logger.error) (logger.error as jest.Mock).mockImplementation(() => {});
-    if (logger.warn) (logger.warn as jest.Mock).mockImplementation(() => {});
+    // Logger is already mocked at module level
   });
 
   describe('Basic Rendering', () => {
