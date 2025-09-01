@@ -35,7 +35,11 @@ jest.mock('@/hooks/useGameStateManager');
 jest.mock('@/hooks/useSupabaseWarmup');
 jest.mock('@/hooks/useRosterData');
 jest.mock('@/hooks/useSavedGamesData');
-jest.mock('@/utils/appSettings');
+jest.mock('@/utils/appSettings', () => ({
+  getLastHomeTeamName: jest.fn().mockResolvedValue('Test Team'),
+  saveCurrentGameIdSetting: jest.fn().mockResolvedValue(undefined),
+  saveHasSeenAppGuide: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/utils/savedGames');
 jest.mock('@/utils/seasons');
 
@@ -176,6 +180,24 @@ describe('HomePage Integration Tests', () => {
       savedGamesQuery: { data: {}, isLoading: false, error: null },
       seasonsQuery: { data: [], isLoading: false, error: null },
       tournamentsQuery: { data: [], isLoading: false, error: null },
+      mutations: {
+        addSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        updateSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        deleteSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        addTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        updateTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        deleteTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        updateGameDetailsMutation: { mutate: jest.fn(), isLoading: false },
+      },
+      handlers: {
+        handleSeasonSave: jest.fn(),
+        handleSeasonUpdate: jest.fn(),
+        handleSeasonDelete: jest.fn(),
+        handleTournamentSave: jest.fn(),
+        handleTournamentUpdate: jest.fn(),
+        handleTournamentDelete: jest.fn(),
+        handleGameDetailsUpdate: jest.fn(),
+      },
     },
     useGameCreationData: {
       newGameData: null,
@@ -207,6 +229,24 @@ describe('HomePage Integration Tests', () => {
       saveGame: jest.fn().mockResolvedValue(true),
       loadGame: jest.fn().mockResolvedValue(mockGameState),
       deleteGame: jest.fn().mockResolvedValue(true),
+      mutations: {
+        addSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        updateSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        deleteSeasonMutation: { mutate: jest.fn(), isLoading: false },
+        addTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        updateTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        deleteTournamentMutation: { mutate: jest.fn(), isLoading: false },
+        updateGameDetailsMutation: { mutate: jest.fn(), isLoading: false },
+      },
+      handlers: {
+        handleSeasonSave: jest.fn(),
+        handleSeasonUpdate: jest.fn(),
+        handleSeasonDelete: jest.fn(),
+        handleTournamentSave: jest.fn(),
+        handleTournamentUpdate: jest.fn(),
+        handleTournamentDelete: jest.fn(),
+        handleGameDetailsUpdate: jest.fn(),
+      },
     },
     useGameStateManager: {
       stateHistory: [mockGameState],
@@ -227,10 +267,20 @@ describe('HomePage Integration Tests', () => {
     jest.clearAllMocks();
     
     // Setup default mocks
-    Object.entries(defaultMockReturns).forEach(([hookName, returnValue]) => {
-      const mockHook = eval(hookName) as jest.Mock;
-      mockHook.mockReturnValue(returnValue);
-    });
+    (useAuth as jest.Mock).mockReturnValue(defaultMockReturns.useAuth);
+    (useGameState as jest.Mock).mockReturnValue(defaultMockReturns.useGameState);
+    (useOfflineFirstGameTimer as jest.Mock).mockReturnValue(defaultMockReturns.useOfflineFirstGameTimer);
+    (useAutoBackup as jest.Mock).mockReturnValue(defaultMockReturns.useAutoBackup);
+    (useGameDataQueries as jest.Mock).mockReturnValue(defaultMockReturns.useGameDataQueries);
+    (useGameCreationData as jest.Mock).mockReturnValue(defaultMockReturns.useGameCreationData);
+    (useUndoRedo as jest.Mock).mockReturnValue(defaultMockReturns.useUndoRedo);
+    (useTacticalBoard as jest.Mock).mockReturnValue(defaultMockReturns.useTacticalBoard);
+    (useRoster as jest.Mock).mockReturnValue(defaultMockReturns.useRoster);
+    (useGameDataManager as jest.Mock).mockReturnValue(defaultMockReturns.useGameDataManager);
+    (useGameStateManager as jest.Mock).mockReturnValue(defaultMockReturns.useGameStateManager);
+    (useSupabaseWarmup as jest.Mock).mockReturnValue(defaultMockReturns.useSupabaseWarmup);
+    (useRosterData as jest.Mock).mockReturnValue(defaultMockReturns.useRosterData);
+    (useSavedGamesData as jest.Mock).mockReturnValue(defaultMockReturns.useSavedGamesData);
   });
 
   describe('Player Interaction Workflows', () => {
