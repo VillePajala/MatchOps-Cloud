@@ -28,7 +28,7 @@ const config = manifestConfig[branch] || manifestConfig.default;
 
 export const metadata: Metadata = {
   title: config.appName,
-  description: "MatchOps Coach: Plan • Track • Debrief - Soccer Tactics and Timer App for Coaches",
+  description: "MatchOps Cloud: Plan • Track • Debrief - Cloud-based Soccer Management Platform for Coaches",
   icons: {
     icon: config.iconPath,
     apple: config.iconPath,

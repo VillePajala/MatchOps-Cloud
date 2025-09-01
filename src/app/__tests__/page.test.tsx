@@ -35,7 +35,7 @@ jest.mock('@/components/HomePage', () => {
 jest.mock('@/config/manifest.config.js', () => ({
   manifestConfig: {
     default: {
-      appName: 'MatchOps Coach',
+      appName: 'MatchOps Cloud',
       iconPath: '/icon.png',
       themeColor: '#1e293b',
     },

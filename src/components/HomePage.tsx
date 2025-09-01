@@ -2252,7 +2252,18 @@ function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
       </div>
 
       {/* Main Content: Soccer Field */}
-      <div className="flex-grow relative bg-black">
+      <div className="flex-grow relative bg-slate-950">
+        {/* Start screen style background overlays */}
+        <div className="absolute inset-0 bg-noise-texture pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-radial from-slate-950 via-slate-900/80 to-slate-900 pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none animate-gradient [background:linear-gradient(120deg,theme(colors.indigo.950),theme(colors.blue.900),theme(colors.cyan.900),theme(colors.indigo.950))] opacity-25" />
+        <div className="absolute inset-0 pointer-events-none sm:opacity-[0.04] opacity-[0.03] [background-image:linear-gradient(to_right,rgba(255,255,255,.25)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.25)_1px,transparent_1px)] [background-size:40px_40px]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 via-sky-700/20 to-cyan-600/30 mix-blend-overlay pointer-events-none" />
+        <div className="absolute -inset-[50px] bg-sky-400/10 blur-3xl top-0 opacity-50 pointer-events-none" />
+        <div className="absolute -inset-[50px] bg-indigo-600/10 blur-3xl bottom-0 opacity-50 pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(60%_50%_at_12%_12%,theme(colors.indigo.700)/0.25_0%,transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(50%_40%_at_88%_78%,theme(colors.sky.500)/0.25_0%,transparent_70%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-400/10 via-transparent to-transparent pointer-events-none" />
         {/* PHASE 2: Show skeleton during game transitions */}
         {showGameSkeleton ? (
           <div className="absolute inset-0 bg-black/90 z-20 flex items-center justify-center p-4">

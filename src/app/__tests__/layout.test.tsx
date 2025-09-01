@@ -55,12 +55,12 @@ jest.mock('@vercel/analytics/react', () => ({
 jest.mock('@/config/manifest.config.js', () => ({
   manifestConfig: {
     development: {
-      appName: 'MatchOps Coach (Dev)',
+      appName: 'MatchOps Cloud (Dev)',
       iconPath: '/icon-dev.png',
       themeColor: '#1e293b',
     },
     default: {
-      appName: 'MatchOps Coach',
+      appName: 'MatchOps Cloud',
       iconPath: '/icon.png', 
       themeColor: '#1e293b',
     },
@@ -408,7 +408,7 @@ describe('Metadata Export', () => {
     expect(metadata).toHaveProperty('icons');
     expect(metadata).toHaveProperty('manifest');
     expect(metadata.manifest).toBe('/manifest.json');
-    expect(metadata.description).toContain('MatchOps Coach');
+    expect(metadata.description).toContain('MatchOps Cloud');
   });
 
   it('should export correct viewport configuration', () => {

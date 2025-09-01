@@ -197,7 +197,7 @@ export default function EnhancedInstallPrompt({ className = '' }: EnhancedInstal
               <span className="text-2xl">⚽</span>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Install MatchOps Coach</h3>
+              <h3 className="font-semibold text-gray-900">Install MatchOps Cloud</h3>
               <p className="text-sm text-gray-600">Plan • Track • Debrief</p>
             </div>
           </div>

@@ -51,7 +51,7 @@ describe('PlayerBar', () => {
     render(<PlayerBar {...defaultProps} />);
     
     // Find and click on the background (the main container)
-    const background = screen.getByRole('img', { name: /MatchOps Coach Logo/i }).closest('div');
+    const background = screen.getByRole('img', { name: /MatchOps Cloud Logo/i }).closest('div');
     if (background) {
       fireEvent.click(background);
       expect(defaultProps.onBarBackgroundClick).toHaveBeenCalled();
@@ -124,7 +124,7 @@ describe('PlayerBar', () => {
     render(<PlayerBar {...emptyProps} />);
     
     // Should render the logo but no players
-    expect(screen.getByRole('img', { name: /MatchOps Coach Logo/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /MatchOps Cloud Logo/i })).toBeInTheDocument();
     expect(screen.queryByText('John')).not.toBeInTheDocument();
   });
 

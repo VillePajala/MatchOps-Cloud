@@ -26,6 +26,7 @@ import {
 import { getSeasons as utilGetSeasons } from '@/utils/seasons';
 import { getTournaments as utilGetTournaments } from '@/utils/tournaments';
 import { useToast } from '@/contexts/ToastProvider';
+import { LoadGameModalDebug } from './LoadGameModalDebug';
 
 export interface LoadGameModalProps {
   isOpen: boolean;
@@ -279,6 +280,11 @@ const LoadGameModal: React.FC<LoadGameModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Add debug component to log saved games data
+  const debugComponent = process.env.NODE_ENV === 'development' ? (
+    <LoadGameModalDebug savedGames={savedGames} />
+  ) : null;
 
   // Scrollable Content Area
   // Main content: List of saved games or loading/error message
@@ -643,6 +649,7 @@ const LoadGameModal: React.FC<LoadGameModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] font-display">
+      {debugComponent}
       <div className="bg-slate-800 flex flex-col h-full w-full bg-noise-texture relative">
         <div className="absolute inset-0 bg-gradient-to-b from-sky-400/10 via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-indigo-600/10 mix-blend-soft-light pointer-events-none" />

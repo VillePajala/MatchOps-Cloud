@@ -1,7 +1,7 @@
 {
-  "name": "MatchOps Coach (Preview)",
-  "short_name": "Preview App",
-  "description": "Soccer Tactics and Timer App for Coaches",
+  "name": "MatchOps Cloud",
+  "short_name": "MatchOps",
+  "description": "Cloud-based Soccer Management Platform for Coaches",
   "start_url": "/",
   "display": "fullscreen",
   "background_color": "#111827",

@@ -5,19 +5,60 @@
  * The uiStore manages modal states, view modes, and UI interactions.
  */
 
+// Unmock the uiStore to test the real implementation
+jest.unmock('../uiStore');
+
 import { renderHook, act } from '@testing-library/react';
 import { useUIStore } from '../uiStore';
 
 describe('UIStore Comprehensive Testing', () => {
   beforeEach(() => {
-    // Reset store state by calling the hook
-    const { result } = renderHook(() => useUIStore());
-    act(() => {
-      result.current.closeAllModals();
-      result.current.setTacticsBoardView(false);
-      result.current.setDrawingMode(false);
-      result.current.setPlayerSelectionMode(false);
-      result.current.setFieldEditMode(false);
+    // Reset store state using Zustand's store directly
+    useUIStore.setState({
+      modals: {
+        gameSettingsModal: false,
+        newGameSetupModal: false,
+        loadGameModal: false,
+        saveGameModal: false,
+        gameStatsModal: false,
+        goalLogModal: false,
+        rosterSettingsModal: false,
+        playerAssessmentModal: false,
+        seasonTournamentModal: false,
+        settingsModal: false,
+        instructionsModal: false,
+        trainingResourcesModal: false,
+        authModal: false,
+        migrationModal: false,
+        syncProgressModal: false,
+      },
+      view: {
+        isTacticsBoardView: false,
+        isDrawingMode: false,
+        isPlayerSelectionMode: false,
+        isFieldEditMode: false,
+        showPlayerNames: true,
+        showPlayerNumbers: true,
+        showOpponents: false,
+        showTacticalElements: false,
+        selectedDrawingTool: null,
+        drawingColor: '#000000',
+        drawingThickness: 2,
+        isDrawing: false,
+        currentDrawingPoints: [],
+        isDraggingPlayer: false,
+        draggingPlayerId: null,
+        isDraggingOpponent: false,
+        draggingOpponentId: null,
+        isDraggingTacticalDisc: false,
+        draggingTacticalDiscId: null,
+        isDraggingBall: false,
+        selectedPlayerIds: [],
+        selectedOpponentIds: [],
+        selectedTacticalElements: [],
+      },
+      modalStack: [],
+      notifications: [],
     });
   });
 
@@ -306,13 +347,13 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.setDrawingColor('#ff0000');
       });
 
-      expect(result.current.view.selectedDrawingColor).toBe('#ff0000');
+      expect(result.current.view.drawingColor).toBe('#ff0000');
 
       act(() => {
         result.current.setDrawingColor('#00ff00');
       });
 
-      expect(result.current.view.selectedDrawingColor).toBe('#00ff00');
+      expect(result.current.view.drawingColor).toBe('#00ff00');
     });
 
     it('should manage drawing thickness', () => {
@@ -345,16 +386,16 @@ describe('UIStore Comprehensive Testing', () => {
       });
 
       expect(result.current.view.isDrawing).toBe(true);
-      expect(result.current.view.currentDrawing).toHaveLength(1);
-      expect(result.current.view.currentDrawing[0]).toEqual(startPoint);
+      expect(result.current.view.currentDrawingPoints).toHaveLength(1);
+      expect(result.current.view.currentDrawingPoints[0]).toEqual(startPoint);
 
       // Add point
       act(() => {
         result.current.addDrawingPoint(midPoint);
       });
 
-      expect(result.current.view.currentDrawing).toHaveLength(2);
-      expect(result.current.view.currentDrawing[1]).toEqual(midPoint);
+      expect(result.current.view.currentDrawingPoints).toHaveLength(2);
+      expect(result.current.view.currentDrawingPoints[1]).toEqual(midPoint);
 
       // End drawing
       act(() => {
@@ -374,14 +415,14 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.addDrawingPoint({ relX: 0.5, relY: 0.6 });
       });
 
-      expect(result.current.view.currentDrawing).toHaveLength(3);
+      expect(result.current.view.currentDrawingPoints).toHaveLength(3);
 
       // Clear drawing
       act(() => {
         result.current.clearCurrentDrawing();
       });
 
-      expect(result.current.view.currentDrawing).toHaveLength(0);
+      expect(result.current.view.currentDrawingPoints).toHaveLength(0);
       expect(result.current.view.isDrawing).toBe(false);
     });
   });
@@ -395,14 +436,14 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.startDraggingPlayer('player-123');
       });
 
-      expect(result.current.view.draggingPlayer).toBe('player-123');
+      expect(result.current.view.draggingPlayerId).toBe('player-123');
 
       // End dragging player
       act(() => {
         result.current.endDraggingPlayer();
       });
 
-      expect(result.current.view.draggingPlayer).toBeNull();
+      expect(result.current.view.draggingPlayerId).toBeNull();
     });
 
     it('should manage opponent dragging', () => {
@@ -413,14 +454,14 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.startDraggingOpponent('opponent-456');
       });
 
-      expect(result.current.view.draggingOpponent).toBe('opponent-456');
+      expect(result.current.view.draggingOpponentId).toBe('opponent-456');
 
       // End dragging opponent
       act(() => {
         result.current.endDraggingOpponent();
       });
 
-      expect(result.current.view.draggingOpponent).toBeNull();
+      expect(result.current.view.draggingOpponentId).toBeNull();
     });
 
     it('should manage tactical disc dragging', () => {
@@ -431,14 +472,14 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.startDraggingTacticalDisc('disc-789');
       });
 
-      expect(result.current.view.draggingTacticalDisc).toBe('disc-789');
+      expect(result.current.view.draggingTacticalDiscId).toBe('disc-789');
 
       // End dragging tactical disc
       act(() => {
         result.current.endDraggingTacticalDisc();
       });
 
-      expect(result.current.view.draggingTacticalDisc).toBeNull();
+      expect(result.current.view.draggingTacticalDiscId).toBeNull();
     });
 
     it('should manage ball dragging', () => {
@@ -449,14 +490,14 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.startDraggingBall();
       });
 
-      expect(result.current.view.draggingBall).toBe(true);
+      expect(result.current.view.isDraggingBall).toBe(true);
 
       // End dragging ball
       act(() => {
         result.current.endDraggingBall();
       });
 
-      expect(result.current.view.draggingBall).toBe(false);
+      expect(result.current.view.isDraggingBall).toBe(false);
     });
   });
 
@@ -515,7 +556,7 @@ describe('UIStore Comprehensive Testing', () => {
       expect(result.current.view.isDrawingMode).toBe(true);
       expect(result.current.view.selectedPlayerIds).toEqual(['p1', 'p2']);
       expect(result.current.view.selectedDrawingTool).toBe('arrow');
-      expect(result.current.view.selectedDrawingColor).toBe('#blue');
+      expect(result.current.view.drawingColor).toBe('#blue');
     });
 
     it('should handle drawing interaction flow', () => {
@@ -531,7 +572,7 @@ describe('UIStore Comprehensive Testing', () => {
 
       expect(result.current.view.isDrawingMode).toBe(true);
       expect(result.current.view.selectedDrawingTool).toBe('pen');
-      expect(result.current.view.selectedDrawingColor).toBe('#red');
+      expect(result.current.view.drawingColor).toBe('#red');
       expect(result.current.view.drawingThickness).toBe(3);
 
       // Drawing sequence
@@ -546,14 +587,14 @@ describe('UIStore Comprehensive Testing', () => {
       });
 
       expect(result.current.view.isDrawing).toBe(true);
-      expect(result.current.view.currentDrawing).toEqual([points[0]]);
+      expect(result.current.view.currentDrawingPoints).toEqual([points[0]]);
 
       act(() => {
         result.current.addDrawingPoint(points[1]);
         result.current.addDrawingPoint(points[2]);
       });
 
-      expect(result.current.view.currentDrawing).toEqual(points);
+      expect(result.current.view.currentDrawingPoints).toEqual(points);
 
       act(() => {
         result.current.endDrawing();
@@ -570,29 +611,29 @@ describe('UIStore Comprehensive Testing', () => {
         result.current.startDraggingPlayer('player-1');
       });
 
-      expect(result.current.view.draggingPlayer).toBe('player-1');
+      expect(result.current.view.draggingPlayerId).toBe('player-1');
 
       act(() => {
         result.current.endDraggingPlayer();
         result.current.startDraggingTacticalDisc('disc-1');
       });
 
-      expect(result.current.view.draggingPlayer).toBeNull();
-      expect(result.current.view.draggingTacticalDisc).toBe('disc-1');
+      expect(result.current.view.draggingPlayerId).toBeNull();
+      expect(result.current.view.draggingTacticalDiscId).toBe('disc-1');
 
       act(() => {
         result.current.endDraggingTacticalDisc();
         result.current.startDraggingBall();
       });
 
-      expect(result.current.view.draggingTacticalDisc).toBeNull();
-      expect(result.current.view.draggingBall).toBe(true);
+      expect(result.current.view.draggingTacticalDiscId).toBeNull();
+      expect(result.current.view.isDraggingBall).toBe(true);
 
       act(() => {
         result.current.endDraggingBall();
       });
 
-      expect(result.current.view.draggingBall).toBe(false);
+      expect(result.current.view.isDraggingBall).toBe(false);
     });
   });
 

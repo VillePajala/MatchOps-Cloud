@@ -20,6 +20,8 @@ generate-admin-key.js
 /playwright-report
 /blob-report
 playwright/.cache/
+e2e-results.xml
+screenshots/
 
 # Temporary test artifacts (keep root clean)
 /test*.txt

@@ -1,5 +1,5 @@
 {
-  "name": "matchops-coach",
+  "name": "matchops-cloud",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,8 +16,14 @@
     "test:ci": "NODE_OPTIONS='--max-old-space-size=6144' LOG_LEVEL=error jest --coverage --maxWorkers=2 --silent --passWithNoTests --forceExit --testTimeout=10000",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "test:smoke": "./scripts/smoke-test.sh",
+    "test:mutation": "stryker run",
+    "test:mutation:stores": "stryker run --mutate 'src/stores/**/*.ts'",
+    "test:mutation:utils": "stryker run --mutate 'src/utils/**/*.ts'",
+    "test:mutation:hooks": "stryker run --mutate 'src/hooks/**/*.ts'",
     "ci:bundle-budgets": "node scripts/check-bundle-budgets.mjs",
     "generate:i18n-types": "node scripts/generate-i18n-types.mjs",
     "analyze": "ANALYZE=true npm run build",
@@ -50,11 +56,15 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@axe-core/react": "^4.10.2",
     "@eslint/eslintrc": "^3",
     "@mswjs/interceptors": "^0.39.6",
     "@next/bundle-analyzer": "^15.4.5",
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "^1.55.0",
+    "@stryker-mutator/core": "^9.0.1",
+    "@stryker-mutator/jest-runner": "^9.0.1",
+    "@stryker-mutator/typescript-checker": "^9.0.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

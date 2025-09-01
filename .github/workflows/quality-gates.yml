@@ -1,0 +1,219 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-checks:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for accurate diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🎨 Lint Check
+        id: lint
+        run: |
+          npm run lint:strict || echo "LINT_FAILED=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: 🔍 Type Check
+        id: typecheck
+        run: |
+          npx tsc --noEmit || echo "TYPE_CHECK_FAILED=true" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: 🧪 Run Tests with Coverage
+        id: test
+        run: |
+          npm run test:ci || echo "TESTS_FAILED=true" >> $GITHUB_ENV
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+          LOG_LEVEL: error
+        continue-on-error: true
+
+      - name: 📊 Generate Coverage Report
+        if: always()
+        id: coverage
+        run: |
+          # Extract coverage percentages
+          COVERAGE_OUTPUT=$(npx jest --coverage --silent --passWithNoTests 2>/dev/null | tail -20)
+          
+          # Parse coverage values
+          STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s+:\s+\K[0-9.]+' || echo "0")
+          BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s+:\s+\K[0-9.]+' || echo "0")
+          FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s+:\s+\K[0-9.]+' || echo "0")
+          LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s+:\s+\K[0-9.]+' || echo "0")
+          
+          # Save to environment
+          echo "COVERAGE_STATEMENTS=$STATEMENTS" >> $GITHUB_ENV
+          echo "COVERAGE_BRANCHES=$BRANCHES" >> $GITHUB_ENV
+          echo "COVERAGE_FUNCTIONS=$FUNCTIONS" >> $GITHUB_ENV
+          echo "COVERAGE_LINES=$LINES" >> $GITHUB_ENV
+          
+          # Check against thresholds
+          if (( $(echo "$STATEMENTS < 51" | bc -l) )); then
+            echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
+            echo "Coverage below threshold: Statements $STATEMENTS% < 51%" >> $GITHUB_STEP_SUMMARY
+          fi
+          if (( $(echo "$LINES < 51" | bc -l) )); then
+            echo "COVERAGE_FAILED=true" >> $GITHUB_ENV
+            echo "Coverage below threshold: Lines $LINES% < 51%" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+      - name: 📈 Coverage Delta (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Get base branch coverage
+          git checkout ${{ github.base_ref }}
+          npm ci --prefer-offline --no-audit
+          BASE_COVERAGE=$(npx jest --coverage --silent --passWithNoTests 2>/dev/null | grep -oP 'Statements\s+:\s+\K[0-9.]+' || echo "0")
+          
+          # Return to PR branch
+          git checkout ${{ github.head_ref }}
+          
+          # Calculate delta
+          DELTA=$(echo "$COVERAGE_STATEMENTS - $BASE_COVERAGE" | bc)
+          echo "COVERAGE_DELTA=$DELTA" >> $GITHUB_ENV
+          
+          if (( $(echo "$DELTA < -2" | bc -l) )); then
+            echo "COVERAGE_REGRESSION=true" >> $GITHUB_ENV
+            echo "⚠️ Coverage regression detected: $DELTA%" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+      - name: 📝 Generate Quality Report
+        if: always()
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 🎯 Quality Gates Report
+          
+          ## Status Overview
+          | Check | Status | Details |
+          |-------|--------|---------|
+          | 🎨 Linting | ${{ env.LINT_FAILED == 'true' && '❌ Failed' || '✅ Passed' }} | ESLint with strict mode |
+          | 🔍 Type Check | ${{ env.TYPE_CHECK_FAILED == 'true' && '❌ Failed' || '✅ Passed' }} | TypeScript compilation |
+          | 🧪 Tests | ${{ env.TESTS_FAILED == 'true' && '❌ Failed' || '✅ Passed' }} | Jest unit & integration |
+          | 📊 Coverage | ${{ env.COVERAGE_FAILED == 'true' && '⚠️ Below Threshold' || '✅ Meets Threshold' }} | See details below |
+          
+          ## 📊 Coverage Report
+          | Metric | Coverage | Threshold | Status |
+          |--------|----------|-----------|--------|
+          | Statements | ${{ env.COVERAGE_STATEMENTS }}% | 51% | ${{ env.COVERAGE_STATEMENTS >= 51 && '✅' || '❌' }} |
+          | Branches | ${{ env.COVERAGE_BRANCHES }}% | 44% | ${{ env.COVERAGE_BRANCHES >= 44 && '✅' || '❌' }} |
+          | Functions | ${{ env.COVERAGE_FUNCTIONS }}% | 46% | ${{ env.COVERAGE_FUNCTIONS >= 46 && '✅' || '❌' }} |
+          | Lines | ${{ env.COVERAGE_LINES }}% | 51% | ${{ env.COVERAGE_LINES >= 51 && '✅' || '❌' }} |
+          
+          EOF
+          
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -n "${{ env.COVERAGE_DELTA }}" ]; then
+            echo "### 📈 Coverage Delta: ${{ env.COVERAGE_DELTA }}%" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 🚦 Final Quality Gate Check
+        if: always()
+        run: |
+          FAILED=false
+          
+          if [ "${{ env.LINT_FAILED }}" = "true" ]; then
+            echo "❌ Linting failed - blocking merge"
+            FAILED=true
+          fi
+          
+          if [ "${{ env.TYPE_CHECK_FAILED }}" = "true" ]; then
+            echo "❌ Type checking failed - blocking merge"
+            FAILED=true
+          fi
+          
+          if [ "${{ env.TESTS_FAILED }}" = "true" ]; then
+            echo "❌ Tests failed - blocking merge"
+            FAILED=true
+          fi
+          
+          if [ "${{ env.COVERAGE_FAILED }}" = "true" ]; then
+            echo "❌ Coverage below threshold - blocking merge"
+            FAILED=true
+          fi
+          
+          if [ "${{ env.COVERAGE_REGRESSION }}" = "true" ]; then
+            echo "⚠️ Coverage regression detected (>2% drop) - review required"
+            # Don't block for small regressions, but flag for review
+          fi
+          
+          if [ "$FAILED" = "true" ]; then
+            echo "## ❌ Quality Gates Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please fix the issues above before merging." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "## ✅ All Quality Gates Passed" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+  # Separate job for PR comments (requires write permissions)
+  pr-comment:
+    name: PR Coverage Comment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: quality-checks
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Generate coverage
+        run: npm run test:ci
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+          LOG_LEVEL: error
+
+      - name: Comment coverage on PR
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          threshold: 51
+          custom-title: "📊 Coverage Report for PR #${{ github.event.pull_request.number }}"
+          coverage-file: ./coverage/coverage-final.json
+          base-coverage-file: ./coverage/coverage-final.json

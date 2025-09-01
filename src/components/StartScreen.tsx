@@ -129,7 +129,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
           </span>
           <span className="block -mt-1 relative text-yellow-400 title-outline">
             <span className="absolute inset-0 -z-10 blur-[6px] opacity-60 [background:radial-gradient(closest-side,rgba(234,179,8,0.35),transparent_70%)]" />
-            Coach
+            Cloud
           </span>
           {/* Remove sheen sweep; rely on animated gradient text */}
         </h1>
@@ -137,7 +137,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
           {t('startScreen.tagline', 'Elevate Your Game')}
           <span className="absolute inset-0 -z-10 mx-auto w-[80%] h-full pointer-events-none [background:radial-gradient(closest-side,rgba(99,102,241,0.12),transparent_70%)] blur-md" />
         </p>
-        <div className="h-px w-44 sm:w-64 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent mx-auto mt-6 sm:mt-8 mb-14 sm:mb-20" />
+        <div className="h-px w-44 sm:w-64 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent mx-auto mt-6 sm:mt-8 mb-8 sm:mb-12" />
 
         {/* Show different content based on auth state */}
         {!isAuthenticated ? (

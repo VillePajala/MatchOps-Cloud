@@ -54,29 +54,81 @@ const customJestConfig = {
     '!src/app/auth-debug/**',
     '!src/app/password-reset-help/**'
   ],
-  // TEMPORARY: Conservative thresholds while fixing test infrastructure
+  // Phase 4: Production Quality Gates - Coverage Thresholds
   coverageThreshold: {
-    // Step 1: Get to green first with low thresholds
+    // Global minimum thresholds (Phase 4 requirement: ≥60%)
     global: { 
-      statements: 40, 
-      lines: 40, 
-      functions: 40, 
-      branches: 30 
+      statements: 51, // Current: 51.55%, will ratchet to 60%
+      lines: 51,      // Current: 52.11%, will ratchet to 60%
+      functions: 46,  // Current: 46.79%, will ratchet to 60%
+      branches: 44    // Current: 44.08%, will ratchet to 50%
     },
-    // DISABLED: Scope-specific gates until infrastructure is stable
-    // Will re-enable these progressively
-    // "./src/utils/**/*.{ts,tsx}": { statements: 95, lines: 95, functions: 95, branches: 85 },
-    // "./src/stores/**/*.{ts,tsx}": { statements: 90, lines: 90, functions: 90, branches: 85 },
-    // "./src/hooks/**/*.{ts,tsx}": { statements: 85, lines: 85, functions: 85, branches: 80 },
-    // DISABLED: Component-specific thresholds until tests are stable
-    // Will re-enable progressively
-    // "./src/components/HomePage.tsx": { statements: 85, lines: 85, functions: 85, branches: 75 },
-    // "./src/components/ControlBar.tsx": { statements: 85, lines: 85, functions: 85, branches: 75 },
-    // "./src/components/TimerOverlay.tsx": { statements: 85, lines: 85, functions: 85, branches: 75 },
-    // "./src/components/GameInfoBar.tsx": { statements: 85, lines: 85, functions: 85, branches: 75 },
-    // "./src/components/SoccerField.tsx": { statements: 85, lines: 85, functions: 85, branches: 75 },
-    // DISABLED: App-specific thresholds until tests are stable
-    // "./src/app/**/*.{ts,tsx}": { statements: 75, lines: 75, functions: 75, branches: 65 }
+    // Critical modules (Phase 4 requirement: ≥80% lines, ≥90% functions)
+    "./src/stores/persistenceStore.ts": { 
+      statements: 70, 
+      lines: 73,      // Current: 73.19%
+      functions: 86,  // Current: 86.58%
+      branches: 65 
+    },
+    "./src/providers/storage/storageManager.ts": { 
+      statements: 90, 
+      lines: 94,      // Current: 94.17%
+      functions: 100, // Current: 100%
+      branches: 85 
+    },
+    "./src/providers/storage/supabaseProvider.ts": { 
+      statements: 80, 
+      lines: 86,      // Current: 86%
+      functions: 96,  // Current: 96.55%
+      branches: 75 
+    },
+    // Store coverage requirements
+    "./src/stores/**/*.{ts,tsx}": { 
+      statements: 50, 
+      lines: 50, 
+      functions: 50, 
+      branches: 40 
+    },
+    // Critical component coverage
+    "./src/components/HomePage.tsx": { 
+      statements: 47, // Current: 47.36%
+      lines: 47, 
+      functions: 45, 
+      branches: 40 
+    },
+    // Modal coverage requirements
+    "./src/components/LoadGameModal.tsx": { 
+      statements: 80, 
+      lines: 83,      // Current: 83.64%
+      functions: 80, 
+      branches: 70 
+    },
+    "./src/components/NewGameSetupModal.tsx": { 
+      statements: 70, 
+      lines: 71,      // Current: 71.67%
+      functions: 70, 
+      branches: 65 
+    },
+    "./src/components/GameSettingsModal.tsx": { 
+      statements: 60, 
+      lines: 61,      // Current: 61.8%
+      functions: 60, 
+      branches: 55 
+    },
+    // UI interaction hotspots (Phase 4 requirement: ≥70%)
+    "./src/components/ControlBar.tsx": { 
+      statements: 70, 
+      lines: 70, 
+      functions: 70, 
+      branches: 65 
+    },
+    // Utils directory (already excellent)
+    "./src/utils/**/*.{ts,tsx}": { 
+      statements: 80, 
+      lines: 84,      // Current: 84.94%
+      functions: 80, 
+      branches: 75 
+    }
   },
   // Add transform for ts-jest if needed, but next/jest should handle it
   // transform: {
