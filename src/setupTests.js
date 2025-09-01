@@ -124,11 +124,21 @@ global.DataTransfer = class DataTransfer {
   }
 };
 
-// Mock DragEvent to include dataTransfer
+// Mock DragEvent to include dataTransfer for React Testing Library
+Object.defineProperty(window, 'DragEvent', {
+  value: class DragEvent extends Event {
+    constructor(type, eventInitDict = {}) {
+      super(type, eventInitDict);
+      this.dataTransfer = new global.DataTransfer();
+    }
+  },
+});
+
+// Mock for fireEvent drag events
 const originalCreateEvent = document.createEvent;
 document.createEvent = function(eventType) {
   const event = originalCreateEvent.call(this, eventType);
-  if (eventType === 'DragEvent' || event.type === 'dragstart') {
+  if (eventType === 'DragEvent' || event.type === 'dragstart' || event.type === 'drag' || event.type === 'dragover' || event.type === 'drop') {
     event.dataTransfer = new global.DataTransfer();
   }
   return event;
