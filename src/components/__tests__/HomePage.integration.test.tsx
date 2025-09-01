@@ -15,6 +15,7 @@ import { useGameStateManager } from '@/hooks/useGameStateManager';
 import { useSupabaseWarmup } from '@/hooks/useSupabaseWarmup';
 import { useRosterData } from '@/hooks/useRosterData';
 import { useSavedGamesData } from '@/hooks/useSavedGamesData';
+import usePlayerFieldManager from '@/hooks/usePlayerFieldManager';
 import type { Player, GameEvent, Point, AppState } from '@/types';
 
 // Mock all external dependencies
@@ -35,6 +36,7 @@ jest.mock('@/hooks/useGameStateManager');
 jest.mock('@/hooks/useSupabaseWarmup');
 jest.mock('@/hooks/useRosterData');
 jest.mock('@/hooks/useSavedGamesData');
+jest.mock('@/hooks/usePlayerFieldManager');
 jest.mock('@/utils/appSettings', () => ({
   getLastHomeTeamName: jest.fn().mockResolvedValue('Test Team'),
   saveCurrentGameIdSetting: jest.fn().mockResolvedValue(undefined),
@@ -261,6 +263,33 @@ describe('HomePage Integration Tests', () => {
     useSavedGamesData: {
       savedGamesQuery: { data: {}, isLoading: false, error: null },
     },
+    usePlayerFieldManager: {
+      playersOnField: mockPlayers,
+      setPlayersOnField: jest.fn(),
+      opponents: [],
+      setOpponents: jest.fn(),
+      drawings: [],
+      setDrawings: jest.fn(),
+      states: {
+        draggingPlayerFromBarInfo: null,
+      },
+      handlers: {
+        handleDropOnField: jest.fn(),
+        handlePlayerMove: jest.fn(),
+        handlePlayerMoveEnd: jest.fn(),
+        handlePlayerRemove: jest.fn(),
+        handlePlayerDragStartFromBar: jest.fn(),
+        handlePlayerTapInBar: jest.fn(),
+        handlePlayerDropViaTouch: jest.fn(),
+        handlePlayerDragCancelViaTouch: jest.fn(),
+        handlePlaceAllPlayers: jest.fn(),
+        handleResetField: jest.fn(),
+        handleClearDrawingsForView: jest.fn(),
+      },
+      setDraggingPlayerFromBarInfo: jest.fn(),
+      handlePlayerDrop: jest.fn(),
+      isDragging: false,
+    },
   };
 
   beforeEach(() => {
@@ -281,6 +310,7 @@ describe('HomePage Integration Tests', () => {
     (useSupabaseWarmup as jest.Mock).mockReturnValue(defaultMockReturns.useSupabaseWarmup);
     (useRosterData as jest.Mock).mockReturnValue(defaultMockReturns.useRosterData);
     (useSavedGamesData as jest.Mock).mockReturnValue(defaultMockReturns.useSavedGamesData);
+    (usePlayerFieldManager as jest.Mock).mockReturnValue(defaultMockReturns.usePlayerFieldManager);
   });
 
   describe('Player Interaction Workflows', () => {
