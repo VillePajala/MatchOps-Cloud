@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { injectAxe, checkA11y } from '@axe-core/playwright';
+import AxeBuilder from "@axe-core/playwright";
 
 test.describe('Game Workflow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await injectAxe(page);
   });
 
   test.describe('Unauthenticated Game Actions', () => {
@@ -142,7 +141,6 @@ test.describe('Game Workflow', () => {
       expect(h1).toBeGreaterThan(0);
       
       // Run accessibility check focusing on headings
-      await checkA11y(page, null, {
         tags: ['wcag2a', 'wcag2aa'],
         rules: {
           'heading-order': { enabled: true }
@@ -170,7 +168,6 @@ test.describe('Game Workflow', () => {
       await page.goto('/');
       
       // Run accessibility check focusing on color contrast
-      await checkA11y(page, null, {
         tags: ['wcag2aa'],
         rules: {
           'color-contrast': { enabled: true }

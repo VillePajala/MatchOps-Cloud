@@ -1,19 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { injectAxe, checkA11y, getViolations } from '@axe-core/playwright';
+import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Comprehensive Accessibility Testing', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await injectAxe(page);
   });
 
   test.describe('WCAG 2.1 AA Compliance', () => {
     test('should pass all WCAG 2.1 AA rules on start screen', async ({ page }) => {
-      await checkA11y(page, null, {
-        tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should pass WCAG rules in authentication modals', async ({ page }) => {
@@ -21,22 +19,20 @@ test.describe('Comprehensive Accessibility Testing', () => {
       await page.getByRole('button', { name: /sign in/i }).click();
       await page.waitForTimeout(500);
 
-      await checkA11y(page, null, {
-        tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
 
       // Close and test sign up modal
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: /sign up/i }).click();
       await page.waitForTimeout(500);
 
-      await checkA11y(page, null, {
-        tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should maintain accessibility across different viewport sizes', async ({ page }) => {
@@ -51,11 +47,10 @@ test.describe('Comprehensive Accessibility Testing', () => {
         await page.reload();
         await page.waitForLoadState('networkidle');
 
-        await checkA11y(page, null, {
-          tags: ['wcag2a', 'wcag2aa'],
-          detailedReport: true,
-          detailedReportOptions: { html: true },
-        });
+        const accessibilityScanResults = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa'])
+          .analyze();
+        expect(accessibilityScanResults.violations).toEqual([]);
       }
     });
   });
@@ -131,14 +126,12 @@ test.describe('Comprehensive Accessibility Testing', () => {
       await expect(page.locator('h1')).toContainText('MatchOps');
 
       // Check heading hierarchy
-      const violations = await getViolations(page, {
-        tags: ['wcag2a'],
-        rules: {
-          'heading-order': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a'])
+        .withRules(['heading-order'])
+        .analyze();
 
-      expect(violations).toHaveLength(0);
+      expect(accessibilityScanResults.violations).toHaveLength(0);
     });
 
     test('should have meaningful button labels', async ({ page }) => {
@@ -190,21 +183,18 @@ test.describe('Comprehensive Accessibility Testing', () => {
 
   test.describe('Color and Contrast', () => {
     test('should meet color contrast requirements', async ({ page }) => {
-      await checkA11y(page, null, {
-        tags: ['wcag2aa'],
-        rules: {
-          'color-contrast': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .withRules(['color-contrast'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should not rely solely on color for information', async ({ page }) => {
-      await checkA11y(page, null, {
-        rules: {
-          'color-contrast': { enabled: true },
-          'link-in-text-block': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withRules(['color-contrast', 'link-in-text-block'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should be usable in high contrast mode', async ({ page }) => {
@@ -217,9 +207,10 @@ test.describe('Comprehensive Accessibility Testing', () => {
       await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
 
       // Run accessibility check
-      await checkA11y(page, null, {
-        tags: ['wcag2aa'],
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 
@@ -311,19 +302,18 @@ test.describe('Comprehensive Accessibility Testing', () => {
       expect(hasReducedMotion).toBe(true);
 
       // Verify no accessibility violations with reduced motion
-      await checkA11y(page, null, {
-        tags: ['wcag2aa'],
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should not cause seizures with flashing content', async ({ page }) => {
       // Check for elements that might flash or blink rapidly
-      await checkA11y(page, null, {
-        rules: {
-          'blink': { enabled: true },
-          'marquee': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withRules(['blink', 'marquee'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 
@@ -347,9 +337,10 @@ test.describe('Comprehensive Accessibility Testing', () => {
       }
 
       // Run full accessibility check on mobile
-      await checkA11y(page, null, {
-        tags: ['wcag2a', 'wcag2aa'],
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should support screen reader gestures on mobile', async ({ page }) => {
@@ -357,14 +348,11 @@ test.describe('Comprehensive Accessibility Testing', () => {
       await page.reload();
 
       // Elements should be properly marked up for mobile screen readers
-      await checkA11y(page, null, {
-        tags: ['wcag2a', 'wcag2aa'],
-        rules: {
-          'button-name': { enabled: true },
-          'link-name': { enabled: true },
-          'label': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .withRules(['button-name', 'link-name', 'label'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 
@@ -408,14 +396,14 @@ test.describe('Comprehensive Accessibility Testing', () => {
 
   test.describe('Comprehensive Violation Detection', () => {
     test('should detect and report all accessibility violations', async ({ page }) => {
-      const violations = await getViolations(page, {
-        tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
 
       // Log violations for debugging
-      if (violations.length > 0) {
+      if (accessibilityScanResults.violations.length > 0) {
         console.log('Accessibility violations found:');
-        violations.forEach((violation, index) => {
+        accessibilityScanResults.violations.forEach((violation: any, index: number) => {
           console.log(`${index + 1}. ${violation.id}: ${violation.description}`);
           console.log(`   Impact: ${violation.impact}`);
           console.log(`   Nodes: ${violation.nodes.length}`);
@@ -423,15 +411,15 @@ test.describe('Comprehensive Accessibility Testing', () => {
       }
 
       // Should have no violations
-      expect(violations).toHaveLength(0);
+      expect(accessibilityScanResults.violations).toHaveLength(0);
     });
 
     test('should test with different user preferences', async ({ page }) => {
       const preferences = [
-        { reducedMotion: 'reduce', colorScheme: 'dark' },
-        { reducedMotion: 'reduce', colorScheme: 'light' },
-        { reducedMotion: 'no-preference', colorScheme: 'dark' },
-        { reducedMotion: 'no-preference', colorScheme: 'light' },
+        { reducedMotion: 'reduce' as const, colorScheme: 'dark' as const },
+        { reducedMotion: 'reduce' as const, colorScheme: 'light' as const },
+        { reducedMotion: 'no-preference' as const, colorScheme: 'dark' as const },
+        { reducedMotion: 'no-preference' as const, colorScheme: 'light' as const },
       ];
 
       for (const pref of preferences) {
@@ -439,9 +427,10 @@ test.describe('Comprehensive Accessibility Testing', () => {
         await page.reload();
         await page.waitForLoadState('networkidle');
 
-        await checkA11y(page, null, {
-          tags: ['wcag2a', 'wcag2aa'],
-        });
+        const accessibilityScanResults = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa'])
+          .analyze();
+        expect(accessibilityScanResults.violations).toEqual([]);
       }
     });
   });

@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { injectAxe, checkA11y } from '@axe-core/playwright';
+import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await injectAxe(page);
   });
 
   test.describe('Sign In Modal', () => {
@@ -52,10 +51,9 @@ test.describe('Authentication Flow', () => {
     });
 
     test('should be accessible', async ({ page }) => {
-      await checkA11y(page, null, {
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 
@@ -87,10 +85,9 @@ test.describe('Authentication Flow', () => {
     });
 
     test('should be accessible', async ({ page }) => {
-      await checkA11y(page, null, {
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 

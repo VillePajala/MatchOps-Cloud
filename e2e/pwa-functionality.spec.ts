@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { injectAxe, checkA11y } from '@axe-core/playwright';
+import AxeBuilder from "@axe-core/playwright";
 
 test.describe('PWA Functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await injectAxe(page);
   });
 
   test.describe('Service Worker', () => {
@@ -250,11 +249,9 @@ test.describe('PWA Functionality', () => {
       // Simulate PWA mode by hiding browser UI
       await page.setViewportSize({ width: 390, height: 844 });
       
-      // Run accessibility checks
-      await checkA11y(page, null, {
-        detailedReport: true,
-        detailedReportOptions: { html: true },
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should support high contrast mode', async ({ page }) => {
@@ -265,13 +262,11 @@ test.describe('PWA Functionality', () => {
       // App should still be usable
       await expect(page.locator('h1')).toBeVisible();
       
-      // Run accessibility check for high contrast
-      await checkA11y(page, null, {
-        tags: ['wcag2aa'],
-        rules: {
-          'color-contrast': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .withRules(['color-contrast'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should support reduced motion preferences', async ({ page }) => {

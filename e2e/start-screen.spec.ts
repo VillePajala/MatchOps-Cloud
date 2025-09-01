@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { injectAxe, checkA11y } from '@axe-core/playwright';
+import AxeBuilder from "@axe-core/playwright";
 
 test.describe('Start Screen', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await injectAxe(page);
   });
 
   test('should display MatchOps Cloud branding', async ({ page }) => {
@@ -64,11 +63,9 @@ test.describe('Start Screen', () => {
   });
 
   test('should be accessible', async ({ page }) => {
-    // Run accessibility checks
-    await checkA11y(page, null, {
-      detailedReport: true,
-      detailedReportOptions: { html: true },
-    });
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .analyze();
+    expect(accessibilityScanResults.violations).toEqual([]);
   });
 
   test('should have proper viewport meta tag for mobile', async ({ page }) => {
