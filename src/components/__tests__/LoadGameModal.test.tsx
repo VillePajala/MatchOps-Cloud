@@ -7,7 +7,11 @@ import logger from '@/utils/logger';
 
 // Mock dependencies
 jest.mock('@/context/AuthContext');
-jest.mock('@/utils/savedGames');
+jest.mock('@/utils/savedGames', () => ({
+  getSavedGames: jest.fn(),
+  deleteSavedGame: jest.fn(),
+  saveGame: jest.fn(),
+}));
 jest.mock('@/utils/logger');
 
 // Mock child components

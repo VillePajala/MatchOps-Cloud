@@ -223,6 +223,25 @@ describe('HomePage Edge Cases and Error Handling', () => {
       saveCurrentGame: jest.fn().mockResolvedValue(true),
       error: null,
       isLoading: false,
+      // Field state and setters
+      playersOnField: mockPlayers.slice(0, 3),
+      opponents: [],
+      drawings: [],
+      setPlayersOnField: jest.fn(),
+      setOpponents: jest.fn(),
+      setDrawings: jest.fn(),
+      setAvailablePlayers: jest.fn(),
+      // Field handlers
+      handlePlayerDrop: jest.fn(),
+      handleDrawingStart: jest.fn(),
+      handleDrawingAddPoint: jest.fn(),
+      handleDrawingEnd: jest.fn(),
+      handleClearDrawings: jest.fn(),
+      handleAddOpponent: jest.fn(),
+      handleOpponentMove: jest.fn(),
+      handleOpponentMoveEnd: jest.fn(),
+      handleOpponentRemove: jest.fn(),
+      handleToggleGoalie: jest.fn(),
     },
     useOfflineFirstGameTimer: {
       timeElapsed: 0,
@@ -254,6 +273,8 @@ describe('HomePage Edge Cases and Error Handling', () => {
       redo: jest.fn(),
       execute: jest.fn(),
       clear: jest.fn(),
+      resetHistory: jest.fn(),
+      saveStateToHistory: jest.fn(),
     },
     useTacticalBoard: {
       isActive: false,
@@ -263,10 +284,14 @@ describe('HomePage Edge Cases and Error Handling', () => {
     },
     useRoster: {
       players: mockPlayers,
+      playersForCurrentGame: mockPlayers,
       addPlayer: jest.fn(),
       updatePlayer: jest.fn(),
       removePlayer: jest.fn(),
       clearPlayers: jest.fn(),
+      isRosterUpdating: false,
+      rosterError: null,
+      setHighlightRosterButton: jest.fn(),
     },
     useGameDataManager: {
       mutations: {
