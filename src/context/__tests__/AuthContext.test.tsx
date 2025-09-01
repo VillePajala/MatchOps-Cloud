@@ -82,6 +82,15 @@ describe('AuthContext', () => {
     jest.clearAllMocks();
     mockUnsubscribe = jest.fn();
     
+    // Mock window.location.replace to prevent navigation errors in tests
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        replace: jest.fn(),
+      },
+      writable: true,
+    });
+    
     // Default mock implementations
     mockSupabaseAuth.getSession.mockResolvedValue({
       data: { session: null },

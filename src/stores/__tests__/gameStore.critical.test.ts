@@ -52,13 +52,13 @@ describe('GameStore Critical Coverage Tests', () => {
         result.current.setHomeOrAway('home');
       });
 
-      expect(result.current.gameId).toBe('game-123');
+      expect(result.current.gameSession.gameId).toBe('game-123');
       expect(result.current.gameSession.teamName).toBe('Lions FC');
       expect(result.current.gameSession.opponentName).toBe('Tigers FC');
-      expect(result.current.gameDate).toBe('2024-01-15');
-      expect(result.current.gameLocation).toBe('Stadium A');
-      expect(result.current.gameTime).toBe('14:30');
-      expect(result.current.homeOrAway).toBe('home');
+      expect(result.current.gameSession.gameDate).toBe('2024-01-15');
+      expect(result.current.gameSession.gameLocation).toBe('Stadium A');
+      expect(result.current.gameSession.gameTime).toBe('14:30');
+      expect(result.current.gameSession.homeOrAway).toBe('home');
     });
 
     it('should manage game timing', () => {
@@ -71,8 +71,8 @@ describe('GameStore Critical Coverage Tests', () => {
       });
 
       expect(result.current.gameSession.numberOfPeriods).toBe(3);
-      expect(result.current.periodDurationMinutes).toBe(30);
-      expect(result.current.subIntervalMinutes).toBe(10);
+      expect(result.current.gameSession.periodDurationMinutes).toBe(30);
+      expect(result.current.gameSession.subIntervalMinutes).toBe(10);
     });
 
     it('should advance to next period correctly', () => {
@@ -90,7 +90,7 @@ describe('GameStore Critical Coverage Tests', () => {
       });
 
       expect(result.current.gameSession.currentPeriod).toBe(2);
-      expect(result.current.completedIntervalDurations).toEqual([20]);
+      expect(result.current.gameSession.completedIntervalDurations).toEqual([20]);
 
       act(() => {
         result.current.setCurrentPeriod(result.current.gameSession.currentPeriod + 1);
@@ -171,7 +171,7 @@ describe('GameStore Critical Coverage Tests', () => {
         // result.current.confirmSubstitution() // Function doesn't exist;
       });
 
-      expect(result.current.lastSubConfirmationTimeSeconds).toBeGreaterThan(0);
+      expect(result.current.gameSession.lastSubConfirmationTimeSeconds).toBeGreaterThan(0);
       expect(result.current.nextSubDueTimeSeconds).toBe(900); // 15 * 60
     });
   });
