@@ -1466,7 +1466,7 @@ function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
     gameSessionState.gameEvents, // New events (goals, subs, etc.)
     gameSessionState.currentPeriod, gameSessionState.gameStatus, // Period/status changes
     gameSessionState.selectedPlayerIds, // FIXED: Player roster selection changes
-    playersOnField.length, // Player changes on field (not positions)
+    playersOnField?.length || 0, // Player changes on field (not positions)
     gameSessionState.gameNotes, // Notes changes
     scheduleAutosave, hashGameState,
     // Include dependencies needed by the auto-save function but don't trigger on them

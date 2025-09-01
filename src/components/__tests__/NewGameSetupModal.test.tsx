@@ -10,7 +10,12 @@ import logger from '@/utils/logger';
 jest.mock('@/context/AuthContext');
 jest.mock('@/utils/appSettings');
 jest.mock('@/utils/masterRoster');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+}));
 
 // Mock child components
 jest.mock('@/components/ui/Button', () => {
@@ -120,10 +125,7 @@ describe('NewGameSetupModal', () => {
     //   isTimerRunning: false,
     // });
     
-    // Mock logger
-    (logger.debug as jest.Mock).mockImplementation(() => {});
-    (logger.error as jest.Mock).mockImplementation(() => {});
-    (logger.warn as jest.Mock).mockImplementation(() => {});
+    // Logger is already mocked above
   });
 
   describe('Basic Rendering', () => {
@@ -368,15 +370,15 @@ describe('NewGameSetupModal', () => {
       
       await waitFor(() => {
         // expect(gameState.createNewGameState).toHaveBeenCalledWith(
-          expect.objectContaining({
-            teamName: 'Test Team',
-            periodDuration: 45,
-            numberOfPeriods: 2,
-            selectedPlayers: expect.arrayContaining([
-              expect.objectContaining({ id: 'p1', name: 'John Doe' })
-            ])
-          })
-        );
+        //   expect.objectContaining({
+        //     teamName: 'Test Team',
+        //     periodDuration: 45,
+        //     numberOfPeriods: 2,
+        //     selectedPlayers: expect.arrayContaining([
+        //       expect.objectContaining({ id: 'p1', name: 'John Doe' })
+        //     ])
+        //   })
+        // );
         
         expect(defaultProps.onGameCreate).toHaveBeenCalled();
       });
@@ -445,8 +447,8 @@ describe('NewGameSetupModal', () => {
 
     it('should disable create button while creating', async () => {
       // (gameState.createNewGameState as jest.Mock).mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve({}), 1000))
-      );
+      //   new Promise(resolve => setTimeout(() => resolve({}), 1000))
+      // );
       
       render(<NewGameSetupModal {...defaultProps} />);
       
