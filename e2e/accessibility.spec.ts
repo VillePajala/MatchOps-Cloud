@@ -19,20 +19,20 @@ test.describe('Comprehensive Accessibility Testing', () => {
       await page.getByRole('button', { name: /sign in/i }).click();
       await page.waitForTimeout(500);
 
-      const accessibilityScanResults = await new AxeBuilder({ page })
+      const signInAccessibility = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze();
-      expect(accessibilityScanResults.violations).toEqual([]);
+      expect(signInAccessibility.violations).toEqual([]);
 
       // Close and test sign up modal
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: /sign up/i }).click();
       await page.waitForTimeout(500);
 
-      const accessibilityScanResults = await new AxeBuilder({ page })
+      const signUpAccessibility = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze();
-      expect(accessibilityScanResults.violations).toEqual([]);
+      expect(signUpAccessibility.violations).toEqual([]);
     });
 
     test('should maintain accessibility across different viewport sizes', async ({ page }) => {

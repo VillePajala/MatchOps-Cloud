@@ -113,8 +113,8 @@ test.describe('Game Workflow', () => {
           let totalShift = 0;
           const observer = new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
-              if (entry.entryType === 'layout-shift' && !entry.hadRecentInput) {
-                totalShift += entry.value;
+              if (entry.entryType === 'layout-shift' && !(entry as any).hadRecentInput) {
+                totalShift += (entry as any).value;
               }
             }
           });
@@ -141,11 +141,11 @@ test.describe('Game Workflow', () => {
       expect(h1).toBeGreaterThan(0);
       
       // Run accessibility check focusing on headings
-        tags: ['wcag2a', 'wcag2aa'],
-        rules: {
-          'heading-order': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .withRules(['heading-order'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
 
     test('should support screen readers', async ({ page }) => {
@@ -168,11 +168,11 @@ test.describe('Game Workflow', () => {
       await page.goto('/');
       
       // Run accessibility check focusing on color contrast
-        tags: ['wcag2aa'],
-        rules: {
-          'color-contrast': { enabled: true }
-        }
-      });
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .withTags(['wcag2aa'])
+        .withRules(['color-contrast'])
+        .analyze();
+      expect(accessibilityScanResults.violations).toEqual([]);
     });
   });
 
