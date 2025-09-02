@@ -357,13 +357,13 @@ describe('HomePage Comprehensive Testing', () => {
     });
     
     (useUndoRedo as jest.Mock).mockReturnValue({
+      state: {},
+      set: jest.fn(),
+      reset: jest.fn(),
       canUndo: false,
       canRedo: false,
       undo: jest.fn(),
       redo: jest.fn(),
-      clearHistory: jest.fn(),
-      resetHistory: jest.fn(),
-      saveStateToHistory: jest.fn(),
     });
     
     (useTacticalBoard as jest.Mock).mockReturnValue({
@@ -719,13 +719,13 @@ describe('HomePage Comprehensive Testing', () => {
       const redo = jest.fn();
       
       (useUndoRedo as jest.Mock).mockReturnValue({
+        state: {},
+        set: jest.fn(),
+        reset: jest.fn(),
         canUndo: true,
         canRedo: true,
         undo,
         redo,
-        clearHistory: jest.fn(),
-        resetHistory: jest.fn(),
-        saveStateToHistory: jest.fn(),
       });
       
       render(<HomePage skipInitialSetup={true} />);
@@ -745,13 +745,13 @@ describe('HomePage Comprehensive Testing', () => {
 
     it('should disable undo/redo buttons when not available', () => {
       (useUndoRedo as jest.Mock).mockReturnValue({
+        state: {},
+        set: jest.fn(),
+        reset: jest.fn(),
         canUndo: false,
         canRedo: false,
         undo: jest.fn(),
         redo: jest.fn(),
-        clearHistory: jest.fn(),
-        resetHistory: jest.fn(),
-        saveStateToHistory: jest.fn(),
       });
       
       render(<HomePage skipInitialSetup={true} />);
@@ -1222,13 +1222,13 @@ describe('HomePage Comprehensive Testing', () => {
       const mockSaveState = jest.fn();
 
       (useUndoRedo as jest.Mock).mockReturnValue({
+        state: {},
+        set: jest.fn(),
+        reset: jest.fn(),
         canUndo: true,
         canRedo: true,
         undo: mockUndo,
         redo: mockRedo,
-        clearHistory: jest.fn(),
-        resetHistory: jest.fn(),
-        saveStateToHistory: mockSaveState,
       });
 
       render(<HomePage skipInitialSetup={true} />);

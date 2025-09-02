@@ -267,14 +267,13 @@ describe('HomePage Edge Cases and Error Handling', () => {
       clearNewGameData: jest.fn(),
     },
     useUndoRedo: {
+      state: mockGameState,
+      set: jest.fn(),
+      reset: jest.fn(),
       canUndo: false,
       canRedo: false,
       undo: jest.fn(),
       redo: jest.fn(),
-      execute: jest.fn(),
-      clear: jest.fn(),
-      resetHistory: jest.fn(),
-      saveStateToHistory: jest.fn(),
     },
     useTacticalBoard: {
       isActive: false,

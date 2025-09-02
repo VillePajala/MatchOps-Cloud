@@ -153,5 +153,7 @@ afterEach(() => {
 // Clean up after all tests complete
 afterAll(() => {
   // Restore original window.location if it was modified
-  Object.defineProperty(window, 'location', { value: originalLocation });
+  if (originalLocation && typeof window !== 'undefined' && window) {
+    Object.defineProperty(window, 'location', { value: originalLocation });
+  }
 }); 

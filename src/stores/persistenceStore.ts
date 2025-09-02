@@ -960,8 +960,10 @@ export const usePersistenceStore = create<PersistenceStore>()(
           try {
             // Clear data by removing individual items (no clearAllData method in interface)
             const savedGames = await getTypedSavedGames();
-            for (const gameId of Object.keys(savedGames)) {
-              await storageManager.deleteSavedGame(gameId);
+            if (savedGames && typeof savedGames === 'object') {
+              for (const gameId of Object.keys(savedGames)) {
+                await storageManager.deleteSavedGame(gameId);
+              }
             }
             const players = await storageManager.getPlayers();
             if (Array.isArray(players)) {
