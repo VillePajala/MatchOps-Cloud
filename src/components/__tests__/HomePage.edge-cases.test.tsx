@@ -623,10 +623,12 @@ describe('HomePage Edge Cases and Error Handling', () => {
     });
 
     it('should handle component remounting without memory leaks', async () => {
-      const { unmount, rerender } = render(<HomePage />);
+      const { unmount } = render(<HomePage />);
       
       unmount();
-      rerender(<HomePage />);
+      
+      // Render a new component after unmounting to test remounting
+      render(<HomePage />);
       
       expect(screen.getByTestId('soccer-field')).toBeInTheDocument();
     });

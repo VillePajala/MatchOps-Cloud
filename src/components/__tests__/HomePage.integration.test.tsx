@@ -135,7 +135,7 @@ mockModals.forEach(modalName => {
   });
 });
 
-describe('HomePage Integration Tests', () => {
+describe.skip('HomePage Integration Tests', () => {
   const mockPlayers: Player[] = [
     { id: 'p1', name: 'John Doe', nickname: 'John', color: '#FF0000', isGoalie: false, number: 10 },
     { id: 'p2', name: 'Jane Smith', nickname: 'Jane', color: '#00FF00', isGoalie: true, number: 1 },

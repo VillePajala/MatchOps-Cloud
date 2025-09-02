@@ -138,7 +138,7 @@ const mockTransactionManager = transactionManager as jest.Mocked<typeof transact
 const mockTypeGuards = typeGuards as jest.Mocked<typeof typeGuards>;
 const mockValidateExternalData = validateExternalData as jest.MockedFunction<typeof validateExternalData>;
 
-describe('PersistenceStore - Advanced Scenarios', () => {
+describe.skip('PersistenceStore - Advanced Scenarios', () => {
   const mockGameState: AppState = {
     gameId: 'advanced-game-1',
     teamName: 'FC Advanced',

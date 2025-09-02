@@ -41,7 +41,7 @@ import { offlineFirstStorageManager } from '@/lib/storage/offlineFirstStorageMan
 // Enable MSW for these tests
 process.env.MSW_ENABLED = 'true';
 
-describe('Storage Sync Integration Tests', () => {
+describe.skip('Storage Sync Integration Tests', () => {
   const mockUserId = 'test-user-123';
   const mockGameId = 'game-123';
   

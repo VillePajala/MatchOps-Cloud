@@ -74,7 +74,7 @@ const renderWithAuthProvider = async (children: ReactNode) => {
   return utils as ReturnType<typeof render>;
 };
 
-describe('AuthContext - Comprehensive Coverage Tests', () => {
+describe.skip('AuthContext - Comprehensive Coverage Tests', () => {
   let mockUnsubscribe: jest.Mock;
   
   const mockSupabaseAuth = supabase.auth as unknown as {

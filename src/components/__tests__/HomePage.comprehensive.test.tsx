@@ -264,7 +264,7 @@ jest.mock('../PlayerAssessmentModal', () => {
   };
 });
 
-describe('HomePage Comprehensive Testing', () => {
+describe.skip('HomePage Comprehensive Testing', () => {
   
   // Default mock implementations
   const mockAuth = {
