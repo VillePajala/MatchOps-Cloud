@@ -1,811 +1,578 @@
-# First Game Onboarding - Supabase Version
+# First Game Onboarding - Implementation Plan
 
 ## Overview
-Comprehensive cloud-aware onboarding system with three interconnected layers designed to guide users from initial app setup through their first real game experience. Enhanced with user preferences sync, cross-device onboarding state, and real-time guidance updates.
+Add a comprehensive three-layer onboarding system to guide new users through their first game creation process with visual overlays, progress tracking, and cloud-synced completion state.
 
-1. **Center Overlay** - Initial setup guidance with cloud sync awareness
-2. **Top Warning Banner** - Temporary workspace alerts with cloud state validation
-3. **First Game Interface Guide** - Tutorial overlay with user progress tracking in Supabase
+## Prerequisites
+- ✅ Smart Roster Detection implemented (provides user state)
+- ✅ Adaptive Start Screen implemented (provides preferences system)
+- ✅ Existing HomePage component at `src/components/HomePage.tsx`
+- ✅ Existing InstructionsModal component
 
-The system provides dynamic feedback based on existing teams, seasons/tournaments, and user preferences stored in the cloud, ensuring contextual guidance across all devices.
+## Progress Tracking
 
-## Data Model (Supabase Tables)
+### Phase 1: Onboarding State Management
+- [ ] **Step 1.1**: Add onboarding tables to Supabase (5 min)
+- [ ] **Step 1.2**: Create onboarding types in `src/types/index.ts` (5 min)
+- [ ] **Step 1.3**: Create `useOnboarding` hook (20 min)
+- [ ] **Step 1.4**: Test onboarding state persistence (10 min)
 
-### User Preferences and Progress Tracking
+### Phase 2: Welcome Overlay System
+- [ ] **Step 2.1**: Create `WelcomeOverlay` component (25 min)
+- [ ] **Step 2.2**: Add overlay positioning and styling (15 min)
+- [ ] **Step 2.3**: Implement animated entrance/exit (10 min)
+- [ ] **Step 2.4**: Add responsive design for mobile (15 min)
+
+### Phase 3: Warning Banner System
+- [ ] **Step 3.1**: Create `OnboardingBanner` component (15 min)
+- [ ] **Step 3.2**: Add persistent banner logic (10 min)
+- [ ] **Step 3.3**: Implement banner dismissal tracking (10 min)
+
+### Phase 4: Enhanced Instructions Modal
+- [ ] **Step 4.1**: Enhance existing InstructionsModal with progress tracking (20 min)
+- [ ] **Step 4.2**: Add step completion markers (15 min)
+- [ ] **Step 4.3**: Implement guided carousel navigation (20 min)
+- [ ] **Step 4.4**: Add context-aware content (15 min)
+
+### Phase 5: Integration with HomePage
+- [ ] **Step 5.1**: Add onboarding detection to HomePage (10 min)
+- [ ] **Step 5.2**: Implement conditional rendering logic (15 min)
+- [ ] **Step 5.3**: Add onboarding completion triggers (15 min)
+- [ ] **Step 5.4**: Test full onboarding flow (20 min)
+
+### Phase 6: Testing & Polish
+- [ ] **Step 6.1**: Write unit tests for onboarding hook (25 min)
+- [ ] **Step 6.2**: Write integration tests for full flow (20 min)
+- [ ] **Step 6.3**: Manual testing across devices (15 min)
+- [ ] **Step 6.4**: Performance testing and optimization (10 min)
+
+## Implementation Details
+
+### Step 1.1: Add Onboarding Tables
+**File**: Supabase SQL Editor
+**Time**: 5 minutes
+**Validation**: Tables created successfully
+
 ```sql
--- User onboarding progress and preferences
-CREATE TABLE user_preferences (
+-- Onboarding progress tracking
+CREATE TABLE user_onboarding (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  has_seen_first_game_guide BOOLEAN DEFAULT FALSE,
-  has_completed_initial_setup BOOLEAN DEFAULT FALSE,
-  preferred_language TEXT DEFAULT 'en',
-  onboarding_progress JSONB DEFAULT '{}',
-  workspace_preferences JSONB DEFAULT '{}',
+  welcome_overlay_seen BOOLEAN DEFAULT FALSE,
+  welcome_overlay_dismissed_at TIMESTAMP WITH TIME ZONE,
+  instructions_modal_opened BOOLEAN DEFAULT FALSE,
+  instructions_completed_steps INTEGER DEFAULT 0,
+  first_roster_setup_completed BOOLEAN DEFAULT FALSE,
+  first_game_created BOOLEAN DEFAULT FALSE,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  onboarding_completed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
   UNIQUE(user_id)
 );
 
--- Enable RLS for user isolation
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own preferences" ON user_preferences
-  FOR ALL USING (auth.uid() = user_id);
-
--- Onboarding help content (for dynamic help system)
-CREATE TABLE onboarding_content (
+-- Onboarding analytics for improvement
+CREATE TABLE onboarding_analytics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  content_key TEXT NOT NULL,
-  language TEXT NOT NULL DEFAULT 'en',
-  title TEXT NOT NULL,
-  description TEXT,
-  content JSONB NOT NULL,
-  version INTEGER DEFAULT 1,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  UNIQUE(content_key, language)
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL, -- 'overlay_shown', 'overlay_dismissed', 'instructions_opened', 'step_completed', etc.
+  event_data JSONB DEFAULT '{}',
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- RLS policy for content (read-only for users)
-ALTER TABLE onboarding_content ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can read onboarding content" ON onboarding_content
-  FOR SELECT USING (true);
+-- Enable RLS
+ALTER TABLE user_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_analytics ENABLE ROW LEVEL SECURITY;
 
--- Indexes for performance
-CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
-CREATE INDEX idx_onboarding_content_key_lang ON onboarding_content(content_key, language);
+-- Add RLS policies
+CREATE POLICY "Users can manage their own onboarding" ON user_onboarding
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own onboarding analytics" ON onboarding_analytics
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Add indexes
+CREATE INDEX idx_user_onboarding_user_id ON user_onboarding(user_id);
+CREATE INDEX idx_onboarding_analytics_user_event ON onboarding_analytics(user_id, event_type);
 ```
 
-## Enhanced Architecture Changes
-
-### Core Constants (Cloud-aware)
-**File**: `src/config/constants.ts`
-```typescript
-export const DEFAULT_GAME_ID = 'unsaved_game';
-export const ONBOARDING_VERSION = '2.0'; // Cloud version tracking
-```
-
-### User Preferences Integration
+### Step 1.2: Create Onboarding Types
 **File**: `src/types/index.ts`
+**Time**: 5 minutes
+**Validation**: TypeScript compiles without errors
+
 ```typescript
-export interface UserOnboardingProgress {
+export interface UserOnboarding {
   id: string;
   userId: string;
-  hasSeenFirstGameGuide: boolean;
-  hasCompletedInitialSetup: boolean;
-  preferredLanguage: string;
-  onboardingProgress: {
-    centerOverlayShown?: boolean;
-    warningBannerSeen?: boolean;
-    guideStepsCompleted?: number[];
-    lastActiveStep?: number;
-  };
-  workspacePreferences: {
-    skipWorkspaceWarning?: boolean;
-    defaultGameSettings?: any;
-  };
-  createdAt?: string;
-  updatedAt?: string;
+  welcomeOverlaySeen: boolean;
+  welcomeOverlayDismissedAt?: string;
+  instructionsModalOpened: boolean;
+  instructionsCompletedSteps: number;
+  firstRosterSetupCompleted: boolean;
+  firstGameCreated: boolean;
+  onboardingCompleted: boolean;
+  onboardingCompletedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface OnboardingContent {
+export interface OnboardingAnalytics {
   id: string;
-  contentKey: string;
-  language: string;
-  title: string;
-  description?: string;
-  content: {
-    steps: OnboardingStep[];
-    resources: any[];
-  };
-  version: number;
+  userId: string;
+  eventType: string;
+  eventData: Record<string, unknown>;
+  timestamp: string;
 }
 
 export interface OnboardingStep {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  action?: string;
-  completed?: boolean;
+  icon: string;
+  completed: boolean;
+  required: boolean;
 }
 ```
 
-## Enhanced Data Operations
+### Step 1.3: Create useOnboarding Hook
+**File**: `src/hooks/useOnboarding.ts`
+**Time**: 20 minutes
+**Validation**: Hook manages onboarding state correctly
 
-### User Progress Tracking
-**File**: `src/hooks/useOnboardingQueries.ts`
 ```typescript
-export const useOnboardingProgress = () => {
-  const { data: { user } } = useAuth();
-  
-  return useQuery({
-    queryKey: queryKeys.onboardingProgress(user?.id),
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import type { UserOnboarding, OnboardingStep } from '../types';
+
+export const useOnboarding = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['onboarding', user?.id],
     queryFn: async () => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
+      if (!user) throw new Error('No user');
+
       const { data, error } = await supabase
-        .from('user_preferences')
+        .from('user_onboarding')
         .select('*')
         .eq('user_id', user.id)
         .single();
-      
-      if (error && error.code !== 'PGRST116') { // Not found error is OK
-        throw new StorageError('supabase', 'getOnboardingProgress', error);
-      }
-      
-      return data ? transformOnboardingProgressFromSupabase(data) : null;
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
 
-export const useUpdateOnboardingProgress = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (updates: Partial<UserOnboardingProgress>) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
+      if (error && error.code !== 'PGRST116') throw error;
       
-      const supabaseUpdates = transformOnboardingProgressToSupabase(updates, user.id);
-      
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .upsert([{ user_id: user.id, ...supabaseUpdates }], {
-          onConflict: 'user_id'
-        })
-        .select()
-        .single();
-      
-      if (error) throw new StorageError('supabase', 'updateOnboardingProgress', error);
-      return transformOnboardingProgressFromSupabase(data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(queryKeys.onboardingProgress(user?.id));
-    },
-    // Optimistic update for immediate UI feedback
-    onMutate: async (newProgress) => {
-      if (!user) return;
-      
-      await queryClient.cancelQueries(queryKeys.onboardingProgress(user.id));
-      const previousProgress = queryClient.getQueryData(queryKeys.onboardingProgress(user.id));
-      
-      queryClient.setQueryData(queryKeys.onboardingProgress(user.id), (old: UserOnboardingProgress | null) => 
-        old ? { ...old, ...newProgress, updatedAt: new Date().toISOString() } : null
-      );
-      
-      return { previousProgress };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousProgress && user) {
-        queryClient.setQueryData(queryKeys.onboardingProgress(user.id), context.previousProgress);
-      }
-    },
-  });
-};
-```
-
-### Dynamic Content Loading
-**File**: `src/hooks/useOnboardingContent.ts`
-```typescript
-export const useOnboardingContent = (contentKey: string) => {
-  const { i18n } = useTranslation();
-  
-  return useQuery({
-    queryKey: queryKeys.onboardingContent(contentKey, i18n.language),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('onboarding_content')
-        .select('*')
-        .eq('content_key', contentKey)
-        .eq('language', i18n.language)
-        .single();
-      
-      if (error) {
-        // Fallback to English if content not available in user's language
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('onboarding_content')
-          .select('*')
-          .eq('content_key', contentKey)
-          .eq('language', 'en')
+      // Create default onboarding record if none exists
+      if (!data) {
+        const { data: newData, error: createError } = await supabase
+          .from('user_onboarding')
+          .insert({
+            user_id: user.id,
+            welcome_overlay_seen: false,
+            instructions_modal_opened: false,
+            instructions_completed_steps: 0,
+            first_roster_setup_completed: false,
+            first_game_created: false,
+            onboarding_completed: false
+          })
+          .select()
           .single();
         
-        if (fallbackError) throw new StorageError('supabase', 'getOnboardingContent', fallbackError);
-        return transformOnboardingContentFromSupabase(fallbackData);
+        if (createError) throw createError;
+        return transformOnboardingFromSupabase(newData);
       }
-      
-      return transformOnboardingContentFromSupabase(data);
+
+      return transformOnboardingFromSupabase(data);
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes (content doesn't change often)
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
-};
-```
 
-## Real-time Synchronization
+  const updateOnboarding = useMutation({
+    mutationFn: async (updates: Partial<UserOnboarding>) => {
+      if (!user) throw new Error('No user');
 
-### Cross-device Onboarding Sync
-**File**: `src/hooks/useOnboardingRealtimeSync.ts`
-```typescript
-export const useOnboardingRealtimeSync = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel('onboarding_progress_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_preferences',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Update onboarding progress cache
-          queryClient.invalidateQueries(queryKeys.onboardingProgress(user.id));
-          
-          // Handle specific onboarding state changes
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const newProgress = transformOnboardingProgressFromSupabase(payload.new);
-            
-            // Sync guide state across tabs
-            if (newProgress.hasSeenFirstGameGuide) {
-              // Close guide on other tabs if completed on one
-              window.dispatchEvent(new CustomEvent('onboardingGuideCompleted', {
-                detail: newProgress
-              }));
-            }
-          }
-        }
-      )
-      .subscribe();
+      const { data, error } = await supabase
+        .from('user_onboarding')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
-    return () => {
-      supabase.removeChannel(channel);
+      if (error) throw error;
+      return transformOnboardingFromSupabase(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['onboarding', user?.id]);
+    },
+  });
+
+  const trackOnboardingEvent = useMutation({
+    mutationFn: async ({ eventType, eventData }: { eventType: string; eventData?: Record<string, unknown> }) => {
+      if (!user) throw new Error('No user');
+
+      const { error } = await supabase
+        .from('onboarding_analytics')
+        .insert({
+          user_id: user.id,
+          event_type: eventType,
+          event_data: eventData || {}
+        });
+
+      if (error) throw error;
+    },
+  });
+
+  // Helper functions for common operations
+  const markWelcomeOverlaySeen = () => {
+    updateOnboarding.mutate({
+      welcomeOverlaySeen: true,
+      welcomeOverlayDismissedAt: new Date().toISOString()
+    });
+    trackOnboardingEvent.mutate({ eventType: 'welcome_overlay_dismissed' });
+  };
+
+  const markInstructionsOpened = () => {
+    updateOnboarding.mutate({ instructionsModalOpened: true });
+    trackOnboardingEvent.mutate({ eventType: 'instructions_opened' });
+  };
+
+  const updateCompletedSteps = (stepCount: number) => {
+    updateOnboarding.mutate({ instructionsCompletedSteps: stepCount });
+    trackOnboardingEvent.mutate({ 
+      eventType: 'instruction_step_completed', 
+      eventData: { stepCount } 
+    });
+  };
+
+  const markRosterSetupCompleted = () => {
+    updateOnboarding.mutate({ firstRosterSetupCompleted: true });
+    trackOnboardingEvent.mutate({ eventType: 'first_roster_setup_completed' });
+  };
+
+  const markFirstGameCreated = () => {
+    const updates: Partial<UserOnboarding> = {
+      firstGameCreated: true,
+      onboardingCompleted: true,
+      onboardingCompletedAt: new Date().toISOString()
     };
-  }, [queryClient, user]);
-};
-```
-
-## Enhanced Layer 1: Cloud-aware Center Overlay
-
-### Display Conditions with Cloud State
-**File**: `src/components/HomePage.tsx`
-
-```typescript
-// Enhanced with cloud state awareness
-const { data: onboardingProgress } = useOnboardingProgress();
-const { data: user } = useAuth();
-
-// Cloud-aware detection
-const showCenterOverlay = useMemo(() => {
-  return currentGameId === DEFAULT_GAME_ID && 
-         playersOnField.length === 0 && 
-         drawings.length === 0 &&
-         user && // Ensure authenticated
-         (!onboardingProgress?.hasCompletedInitialSetup);
-}, [currentGameId, playersOnField.length, drawings.length, user, onboardingProgress]);
-
-{showCenterOverlay && (
-  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-    <div className="bg-slate-800/95 border border-indigo-500/50 rounded-xl p-10 max-w-lg mx-4 pointer-events-auto shadow-2xl backdrop-blur-sm">
-      <CloudAwareOnboardingContent />
-    </div>
-  </div>
-)}
-```
-
-### Enhanced Content with Cloud Benefits
-```typescript
-const CloudAwareOnboardingContent = () => {
-  const { data: teams = [] } = useTeams();
-  const { data: seasons = [] } = useSeasons();
-  const { data: tournaments = [] } = useTournaments();
-  const updateProgress = useUpdateOnboardingProgress();
-  
-  const hasSeasonsTournaments = seasons.length > 0 || tournaments.length > 0;
-  
-  const handleCompleteSetup = async () => {
-    await updateProgress.mutateAsync({
-      hasCompletedInitialSetup: true,
-      onboardingProgress: {
-        centerOverlayShown: true
-      }
-    });
-  };
-  
-  return (
-    <>
-      <div className="text-center space-y-6">
-        <div className="w-16 h-16 mx-auto bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
-          <HiOutlineCloud className="w-8 h-8 text-white" />
-        </div>
-        
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-3">
-            {availablePlayers.length === 0 
-              ? t('firstGame.titleNoPlayersCloud', 'Welcome to MatchOps Cloud!') 
-              : t('firstGame.titleCloud', 'Ready to track your first cloud game?')}
-          </h2>
-          <p className="text-slate-300 leading-relaxed">
-            {availablePlayers.length === 0 
-              ? t('firstGame.descNoPlayersCloud', 'Your data syncs across all devices. Start by setting up your team roster to access cloud features.') 
-              : t('firstGame.descCloud', 'Create a game and your data will sync across all your devices in real-time.')}
-          </p>
-        </div>
-        
-        {/* Cloud benefits callout */}
-        <div className="bg-indigo-900/30 rounded-lg p-4 text-left">
-          <h4 className="text-indigo-200 font-semibold mb-2">Cloud Benefits:</h4>
-          <ul className="text-sm text-slate-300 space-y-1">
-            <li>✓ Sync across all your devices</li>
-            <li>✓ Real-time collaboration</li>
-            <li>✓ Automatic backup and recovery</li>
-            <li>✓ Advanced statistics and analytics</li>
-          </ul>
-        </div>
-        
-        {/* Enhanced dynamic buttons with cloud context */}
-        <div className="space-y-3">
-          {availablePlayers.length === 0 ? (
-            <>
-              <button
-                onClick={() => setIsRosterModalOpen(true)}
-                className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
-              >
-                {t('firstGame.setupCloudRoster', 'Set up Cloud Roster')}
-              </button>
-              <button
-                onClick={() => setIsInstructionsModalOpen(true)}
-                className="w-full px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-lg border border-slate-600 transition-colors duration-200"
-              >
-                {t('firstGame.howItWorksCloud', 'How Cloud Features Work')}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setIsNewGameSetupModalOpen(true)}
-                className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
-              >
-                {t('firstGame.createFirstCloudGame', 'Create First Cloud Game')}
-              </button>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setIsTeamManagerModalOpen(true)}
-                  className={teams.length > 0 
-                    ? "px-4 py-2 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors" 
-                    : "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
-                  }
-                >
-                  {teams.length > 0 
-                    ? t('firstGame.manageTeamsCloud', 'Cloud Teams') 
-                    : t('firstGame.createTeamCloud', 'Create Cloud Team')
-                  }
-                </button>
-                
-                <button
-                  onClick={() => setIsSeasonTournamentModalOpen(true)}
-                  className={hasSeasonsTournaments 
-                    ? "px-4 py-2 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors" 
-                    : "px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
-                  }
-                >
-                  {hasSeasonsTournaments 
-                    ? t('firstGame.manageSeasonsCloud', 'Cloud Seasons') 
-                    : t('firstGame.createSeasonCloud', 'Create Season')
-                  }
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        
-        <button
-          onClick={handleCompleteSetup}
-          className="w-full text-sm text-slate-400 hover:text-slate-300 transition-colors"
-        >
-          {t('firstGame.skipOnboarding', 'Skip setup (I\'ll explore on my own)')}
-        </button>
-      </div>
-    </>
-  );
-};
-```
-
-## Enhanced Layer 2: Cloud-aware Warning Banner
-
-### Enhanced Display Conditions
-```typescript
-const { data: onboardingProgress } = useOnboardingProgress();
-
-const showWorkspaceWarning = useMemo(() => {
-  return currentGameId === DEFAULT_GAME_ID && 
-         (playersOnField.length > 0 || drawings.length > 0) &&
-         !onboardingProgress?.workspacePreferences?.skipWorkspaceWarning;
-}, [currentGameId, playersOnField.length, drawings.length, onboardingProgress]);
-
-{showWorkspaceWarning && (
-  <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
-    <div className="bg-amber-600/95 border border-amber-500/50 rounded-lg px-6 py-3 shadow-xl backdrop-blur-sm max-w-md">
-      <div className="flex items-center gap-3">
-        <HiOutlineExclamationTriangle className="w-5 h-5 text-amber-200 flex-shrink-0" />
-        <div className="flex-1">
-          <p className="text-amber-100 text-sm font-medium leading-tight">
-            {t('firstGame.workspaceWarningCloud', 'This is a temporary workspace. Create a cloud game to save your progress and sync across devices.')}
-          </p>
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={handleCreateCloudGame}
-              className="text-xs bg-amber-700 hover:bg-amber-800 text-amber-100 px-2 py-1 rounded transition-colors"
-            >
-              {t('firstGame.createCloudGame', 'Create Cloud Game')}
-            </button>
-            <button
-              onClick={handleDismissWarning}
-              className="text-xs text-amber-300 hover:text-amber-200 transition-colors"
-            >
-              {t('firstGame.dontShowAgain', "Don't show again")}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-```
-
-## Enhanced Layer 3: Cloud-synchronized Interface Guide
-
-### Enhanced Trigger Logic with Cloud Tracking
-```typescript
-const { data: onboardingProgress } = useOnboardingProgress();
-const updateProgress = useUpdateOnboardingProgress();
-
-// Real-time sync listener
-useOnboardingRealtimeSync();
-
-const [showFirstGameGuide, setShowFirstGameGuide] = useState<boolean>(false);
-const [firstGameGuideStep, setFirstGameGuideStep] = useState<number>(0);
-
-// Enhanced guide display logic
-useEffect(() => {
-  const shouldShowGuide = !onboardingProgress?.hasSeenFirstGameGuide && 
-                         currentGameId && 
-                         currentGameId !== DEFAULT_GAME_ID &&
-                         playersOnField.length === 0 &&
-                         initialLoadComplete;
-  
-  if (shouldShowGuide) {
-    const timer = setTimeout(() => {
-      setShowFirstGameGuide(true);
-      setFirstGameGuideStep(onboardingProgress?.onboardingProgress?.lastActiveStep || 0);
-    }, 1500);
     
-    return () => clearTimeout(timer);
-  }
-}, [onboardingProgress, currentGameId, playersOnField.length, initialLoadComplete]);
-
-// Enhanced close handler with cloud sync
-const handleCloseGuide = async () => {
-  setShowFirstGameGuide(false);
-  
-  // Save progress to cloud
-  await updateProgress.mutateAsync({
-    hasSeenFirstGameGuide: true,
-    onboardingProgress: {
-      ...onboardingProgress?.onboardingProgress,
-      guideStepsCompleted: Array.from({ length: 7 }, (_, i) => i),
-      lastActiveStep: 7
-    }
-  });
-};
-
-// Step navigation with cloud sync
-const handleNextOrClose = async () => {
-  if (firstGameGuideStep === 6) {
-    await handleCloseGuide();
-  } else {
-    const nextStep = firstGameGuideStep + 1;
-    setFirstGameGuideStep(nextStep);
-    
-    // Save step progress
-    await updateProgress.mutateAsync({
-      onboardingProgress: {
-        ...onboardingProgress?.onboardingProgress,
-        lastActiveStep: nextStep,
-        guideStepsCompleted: [
-          ...(onboardingProgress?.onboardingProgress?.guideStepsCompleted || []),
-          firstGameGuideStep
-        ]
-      }
-    });
-  }
-};
-```
-
-### Cloud-Enhanced Guide Content
-```typescript
-const CloudEnhancedGuideStep = ({ step, currentStep }: { step: number; currentStep: number }) => {
-  if (step !== currentStep) return null;
-  
-  const getStepContent = () => {
-    switch (step) {
-      case 0:
-        return (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-indigo-200 text-base flex items-center gap-2">
-              <HiOutlineCloud className="w-5 h-5" />
-              {t('firstGameGuide.playerSelectionCloud', 'Cloud Player Selection (Synced)')}
-            </h3>
-            <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4 marker:text-slate-400">
-              <li>{t('firstGameGuide.tapToSelectCloud', 'Tap player disc to select (syncs across devices)')}</li>
-              <li>{t('firstGameGuide.goalieInstructionsCloud', 'Goalkeeper status syncs to all your devices')}</li>
-              <li>{t('firstGameGuide.tapFieldPlaceCloud', 'Player positions sync in real-time')}</li>
-            </ul>
-            <div className="bg-indigo-900/30 rounded-lg p-3 mt-3">
-              <p className="text-xs text-indigo-200 font-medium">Cloud Feature:</p>
-              <p className="text-xs text-slate-300">Your player selections sync instantly across all logged-in devices.</p>
-            </div>
-          </div>
-        );
-      
-      case 1:
-        return (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-indigo-200 text-base flex items-center gap-2">
-              <HiOutlineGlobeAlt className="w-5 h-5" />
-              {t('firstGameGuide.theFieldCloud', 'The Field (Real-time Sync)')}
-            </h3>
-            <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4 marker:text-slate-400">
-              <li>
-                <span className="text-slate-200">{t('firstGameGuide.placeAllTipCloud', 'Place all players (syncs to team):')}</span>
-                <HiOutlineSquares2X2 aria-hidden className="inline-block align-[-2px] ml-2 text-purple-300" size={18} />
-              </li>
-              <li>
-                <span className="text-slate-200">{t('firstGameGuide.addOpponentTipCloud', 'Add opponents (shared view):')}</span>
-                <HiOutlinePlusCircle aria-hidden className="inline-block align-[-2px] ml-2 text-red-300" size={18} />
-              </li>
-              <li>{t('firstGameGuide.dragToAdjustCloud', 'Drag players - changes sync in real-time')}</li>
-              <li>{t('firstGameGuide.doubleTapRemoveCloud', 'Double-tap to remove (syncs removal)')}</li>
-            </ul>
-            <div className="bg-emerald-900/30 rounded-lg p-3 mt-3">
-              <p className="text-xs text-emerald-200 font-medium">Multi-device Support:</p>
-              <p className="text-xs text-slate-300">Field changes appear instantly on all connected devices.</p>
-            </div>
-          </div>
-        );
-      
-      // Additional enhanced steps with cloud features...
-      default:
-        return null;
-    }
+    updateOnboarding.mutate(updates);
+    trackOnboardingEvent.mutate({ eventType: 'onboarding_completed' });
   };
-  
-  return getStepContent();
-};
-```
 
-## Migration from localStorage Version
-
-### Data Migration Strategy
-**File**: `src/utils/migration/migrateOnboardingToSupabase.ts`
-```typescript
-export const migrateOnboardingToSupabase = async (userId: string) => {
-  // 1. Check existing localStorage onboarding state
-  const hasSeenGuide = localStorage.getItem('hasSeenFirstGameGuide') === 'true';
-  const workspacePrefs = localStorage.getItem('workspacePreferences');
-  
-  let parsedWorkspacePrefs = {};
-  try {
-    parsedWorkspacePrefs = workspacePrefs ? JSON.parse(workspacePrefs) : {};
-  } catch (error) {
-    logger.warn('Failed to parse workspace preferences:', error);
-  }
-  
-  // 2. Create initial Supabase user preferences
-  const initialPreferences: Partial<UserOnboardingProgress> = {
-    userId,
-    hasSeenFirstGameGuide: hasSeenGuide,
-    hasCompletedInitialSetup: hasSeenGuide, // Assume completed if guide was seen
-    onboardingProgress: {
-      centerOverlayShown: hasSeenGuide,
-      warningBannerSeen: true,
-      guideStepsCompleted: hasSeenGuide ? [0, 1, 2, 3, 4, 5, 6] : [],
-      lastActiveStep: hasSeenGuide ? 7 : 0
+  const getOnboardingSteps = (onboarding: UserOnboarding | null): OnboardingStep[] => [
+    {
+      id: 1,
+      title: 'Welcome to MatchOps',
+      description: 'Learn about the key features',
+      icon: '👋',
+      completed: onboarding?.welcomeOverlaySeen || false,
+      required: false
     },
-    workspacePreferences: parsedWorkspacePrefs
-  };
-  
-  // 3. Save to Supabase
-  const { error } = await supabase
-    .from('user_preferences')
-    .upsert([transformOnboardingProgressToSupabase(initialPreferences, userId)], {
-      onConflict: 'user_id'
-    });
-  
-  if (error) throw new StorageError('supabase', 'migrateOnboardingPreferences', error);
-  
-  // 4. Clean up localStorage (optional)
-  localStorage.removeItem('hasSeenFirstGameGuide');
-  localStorage.removeItem('workspacePreferences');
-};
-```
-
-## Offline Support
-
-### Offline Onboarding Cache
-**File**: `src/utils/offline/onboardingCache.ts`
-```typescript
-export const useOfflineOnboardingSync = () => {
-  const [offlineProgress, setOfflineProgress] = useLocalStorage(
-    'onboardingOfflineQueue', 
-    []
-  );
-  
-  const addToOfflineQueue = useCallback((operation) => {
-    setOfflineProgress(queue => [...queue, {
-      id: crypto.randomUUID(),
-      type: 'UPDATE_ONBOARDING_PROGRESS',
-      data: operation.data,
-      timestamp: Date.now(),
-      retries: 0
-    }]);
-  }, [setOfflineProgress]);
-  
-  const processOfflineQueue = useCallback(async () => {
-    if (!navigator.onLine || offlineProgress.length === 0) return;
-    
-    for (const operation of offlineProgress) {
-      try {
-        await supabase
-          .from('user_preferences')
-          .upsert([operation.data], { onConflict: 'user_id' });
-        
-        // Remove successful operation
-        setOfflineProgress(queue => queue.filter(op => op.id !== operation.id));
-        
-      } catch (error) {
-        // Handle retry logic
-        if (operation.retries < 3) {
-          setOfflineProgress(queue => queue.map(op => 
-            op.id === operation.id 
-              ? { ...op, retries: op.retries + 1 }
-              : op
-          ));
-        } else {
-          // Max retries exceeded
-          setOfflineProgress(queue => queue.filter(op => op.id !== operation.id));
-        }
-      }
+    {
+      id: 2,
+      title: 'Set Up Your Roster',
+      description: 'Add players to your team',
+      icon: '👥',
+      completed: onboarding?.firstRosterSetupCompleted || false,
+      required: true
+    },
+    {
+      id: 3,
+      title: 'Create Your First Game',
+      description: 'Start tracking your match',
+      icon: '⚽',
+      completed: onboarding?.firstGameCreated || false,
+      required: true
     }
-  }, [offlineProgress, setOfflineProgress]);
-  
-  // Process queue when coming online
-  useEffect(() => {
-    const handleOnline = () => processOfflineQueue();
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [processOfflineQueue]);
-  
-  return { addToOfflineQueue, processOfflineQueue };
+  ];
+
+  const shouldShowOnboarding = (onboarding: UserOnboarding | null): boolean => {
+    return !onboarding?.onboardingCompleted;
+  };
+
+  const shouldShowWelcomeOverlay = (onboarding: UserOnboarding | null): boolean => {
+    return !onboarding?.welcomeOverlaySeen && shouldShowOnboarding(onboarding);
+  };
+
+  return {
+    onboarding: query.data,
+    isLoading: query.isLoading,
+    steps: getOnboardingSteps(query.data),
+    shouldShowOnboarding: shouldShowOnboarding(query.data),
+    shouldShowWelcomeOverlay: shouldShowWelcomeOverlay(query.data),
+    markWelcomeOverlaySeen,
+    markInstructionsOpened,
+    updateCompletedSteps,
+    markRosterSetupCompleted,
+    markFirstGameCreated,
+    isUpdating: updateOnboarding.isPending
+  };
 };
-```
 
-## Enhanced Translation System
-
-### Cloud-specific Translation Keys
-```json
-{
-  "firstGame": {
-    "titleNoPlayersCloud": "Welcome to MatchOps Cloud!",
-    "titleCloud": "Ready to track your first cloud game?",
-    "descNoPlayersCloud": "Your data syncs across all devices. Start by setting up your team roster to access cloud features.",
-    "descCloud": "Create a game and your data will sync across all your devices in real-time.",
-    "setupCloudRoster": "Set up Cloud Roster",
-    "howItWorksCloud": "How Cloud Features Work",
-    "createFirstCloudGame": "Create First Cloud Game",
-    "manageTeamsCloud": "Cloud Teams",
-    "createTeamCloud": "Create Cloud Team",
-    "manageSeasonsCloud": "Cloud Seasons",
-    "createSeasonCloud": "Create Season",
-    "workspaceWarningCloud": "This is a temporary workspace. Create a cloud game to save your progress and sync across devices.",
-    "createCloudGame": "Create Cloud Game",
-    "dontShowAgain": "Don't show again",
-    "skipOnboarding": "Skip setup (I'll explore on my own)"
-  },
-  "firstGameGuide": {
-    "playerSelectionCloud": "Cloud Player Selection (Synced)",
-    "tapToSelectCloud": "Tap player disc to select (syncs across devices)",
-    "goalieInstructionsCloud": "Goalkeeper status syncs to all your devices",
-    "tapFieldPlaceCloud": "Player positions sync in real-time",
-    "theFieldCloud": "The Field (Real-time Sync)",
-    "placeAllTipCloud": "Place all players (syncs to team):",
-    "addOpponentTipCloud": "Add opponents (shared view):",
-    "dragToAdjustCloud": "Drag players - changes sync in real-time",
-    "doubleTapRemoveCloud": "Double-tap to remove (syncs removal)"
-  }
+function transformOnboardingFromSupabase(data: any): UserOnboarding {
+  return {
+    id: data.id,
+    userId: data.user_id,
+    welcomeOverlaySeen: data.welcome_overlay_seen,
+    welcomeOverlayDismissedAt: data.welcome_overlay_dismissed_at,
+    instructionsModalOpened: data.instructions_modal_opened,
+    instructionsCompletedSteps: data.instructions_completed_steps,
+    firstRosterSetupCompleted: data.first_roster_setup_completed,
+    firstGameCreated: data.first_game_created,
+    onboardingCompleted: data.onboarding_completed,
+    onboardingCompletedAt: data.onboarding_completed_at,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
 }
 ```
 
-## Performance Optimizations
+### Step 2.1: Create WelcomeOverlay Component
+**File**: `src/components/onboarding/WelcomeOverlay.tsx`
+**Time**: 25 minutes
+**Validation**: Overlay displays correctly over soccer field
 
-### Onboarding Content Caching
-```sql
--- Materialized view for frequently accessed onboarding content
-CREATE MATERIALIZED VIEW onboarding_content_cache AS
-SELECT 
-  content_key,
-  language,
-  title,
-  content,
-  version
-FROM onboarding_content
-WHERE version = (
-  SELECT MAX(version) 
-  FROM onboarding_content oc2 
-  WHERE oc2.content_key = onboarding_content.content_key 
-    AND oc2.language = onboarding_content.language
-);
+```typescript
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HiX, HiPlay, HiQuestionMarkCircle } from 'react-icons/hi';
+import { useRouter } from 'next/navigation';
 
--- Refresh function
-CREATE OR REPLACE FUNCTION refresh_onboarding_content_cache()
-RETURNS void AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY onboarding_content_cache;
-END;
-$$ LANGUAGE plpgsql;
+interface WelcomeOverlayProps {
+  isVisible: boolean;
+  onDismiss: () => void;
+  onGetStarted: () => void;
+  onLearnMore: () => void;
+}
+
+export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
+  isVisible,
+  onDismiss,
+  onGetStarted,
+  onLearnMore,
+}) => {
+  const [showContent, setShowContent] = useState(false);
+
+  useEffect(() => {
+    if (isVisible) {
+      // Delay content appearance for smooth animation
+      const timer = setTimeout(() => setShowContent(true), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContent(false);
+    }
+  }, [isVisible]);
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0, y: 50 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: 50 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden"
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10" />
+            <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-indigo-500/20 to-transparent rounded-full blur-xl" />
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-purple-500/20 to-transparent rounded-full blur-xl" />
+            
+            {/* Close Button */}
+            <button
+              onClick={onDismiss}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors z-10"
+              aria-label="Close welcome overlay"
+            >
+              <HiX className="w-5 h-5" />
+            </button>
+
+            <div className="relative p-8">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                  className="text-6xl mb-4"
+                >
+                  ⚽
+                </motion.div>
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-2xl font-bold text-white mb-2"
+                >
+                  Welcome to MatchOps!
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-slate-300"
+                >
+                  Let's get you set up to track your first soccer match
+                </motion.p>
+              </div>
+
+              {/* Features Preview */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="space-y-3 mb-8"
+              >
+                <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full" />
+                  Track goals, assists, and player performance
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+                  Manage multiple teams and tournaments
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                  Analyze statistics and team insights
+                </div>
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="space-y-3"
+              >
+                <button
+                  onClick={onGetStarted}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  <HiPlay className="w-5 h-5" />
+                  Get Started
+                </button>
+                <button
+                  onClick={onLearnMore}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  <HiQuestionMarkCircle className="w-5 h-5" />
+                  How It Works
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 ```
 
-## Benefits of Supabase Migration
+### Step 5.1: Add Onboarding Detection to HomePage
+**File**: `src/components/HomePage.tsx`
+**Time**: 10 minutes
+**Validation**: Onboarding appears for new users
 
-### Enhanced User Experience
-- **Cross-device Continuity**: Onboarding state syncs across all devices
-- **Personalized Content**: Dynamic onboarding based on user progress
-- **Real-time Guidance**: Live updates of onboarding steps across sessions
-- **Progressive Enhancement**: Cloud features highlighted during onboarding
+```typescript
+// Add imports
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { WelcomeOverlay } from './onboarding/WelcomeOverlay';
+import { OnboardingBanner } from './onboarding/OnboardingBanner';
 
-### Improved Data Management
-- **User Isolation**: RLS ensures private onboarding experiences
-- **Progress Tracking**: Detailed analytics on onboarding completion
-- **Content Versioning**: Ability to update onboarding content dynamically
-- **Offline Support**: Onboarding works offline with sync on reconnection
+// In HomePage component
+export const HomePage = () => {
+  const { 
+    shouldShowOnboarding, 
+    shouldShowWelcomeOverlay,
+    markWelcomeOverlaySeen,
+    markInstructionsOpened,
+    markFirstGameCreated 
+  } = useOnboarding();
 
-## Developer Checklist
+  const router = useRouter();
 
-### Database Setup
-- [ ] User preferences table created with RLS policies
-- [ ] Onboarding content table with versioning support
-- [ ] Database indexes for optimal query performance
-- [ ] Migration script from localStorage to Supabase
+  const handleGetStarted = () => {
+    markWelcomeOverlaySeen();
+    // Redirect to roster setup if no players, otherwise show instructions
+    router.push('/roster-settings');
+  };
 
-### API Integration
-- [ ] SupabaseProvider enhanced with onboarding operations
-- [ ] React Query hooks for onboarding progress and content
-- [ ] Real-time subscriptions for cross-device sync
-- [ ] Offline sync queue for onboarding operations
+  const handleLearnMore = () => {
+    markWelcomeOverlaySeen();
+    markInstructionsOpened();
+    // Open instructions modal
+    setShowInstructionsModal(true);
+  };
 
-### UI Components
-- [ ] Cloud-aware center overlay with sync benefits
-- [ ] Enhanced warning banner with cloud context
-- [ ] Multi-device synchronized interface guide
-- [ ] Progress tracking and step persistence
+  return (
+    <div className="relative">
+      {/* Existing HomePage content */}
+      
+      {/* Onboarding Overlay */}
+      <WelcomeOverlay
+        isVisible={shouldShowWelcomeOverlay}
+        onDismiss={markWelcomeOverlaySeen}
+        onGetStarted={handleGetStarted}
+        onLearnMore={handleLearnMore}
+      />
 
-### UX Features
-- [ ] Cross-device onboarding state synchronization
-- [ ] Real-time guide progress updates
-- [ ] Offline onboarding with sync queue
-- [ ] Dynamic content loading based on user language
+      {/* Onboarding Banner */}
+      {shouldShowOnboarding && !shouldShowWelcomeOverlay && (
+        <OnboardingBanner />
+      )}
+    </div>
+  );
+};
+```
 
-### Testing
-- [ ] Unit tests for onboarding hooks and transforms
-- [ ] Integration tests for real-time sync scenarios
-- [ ] E2E tests for cross-device onboarding flows
-- [ ] Migration testing for localStorage → Supabase transition
+## Testing Checklist
+
+### Unit Tests Required
+- [ ] `useOnboarding` hook behavior
+- [ ] WelcomeOverlay component rendering
+- [ ] OnboardingBanner component logic
+- [ ] Onboarding step progression
+
+### Integration Tests Required  
+- [ ] Full onboarding flow from start to finish
+- [ ] Onboarding state persistence across sessions
+- [ ] Analytics data collection
+- [ ] Integration with roster setup
+
+### Manual Testing Checklist
+- [ ] New user sees welcome overlay on first visit
+- [ ] Overlay animations work smoothly
+- [ ] Banner appears after overlay dismissal
+- [ ] Instructions modal tracks progress
+- [ ] Onboarding completes when first game created
+- [ ] Experienced users don't see onboarding
+
+## Definition of Done
+- [ ] All checkboxes above completed
+- [ ] All tests passing
+- [ ] Manual testing completed
+- [ ] Welcome overlay displays correctly
+- [ ] Banner system works persistently
+- [ ] Instructions modal enhanced with progress
+- [ ] Analytics flowing to Supabase
+- [ ] No regression in existing functionality
+
+## Dependencies
+- **Requires**: Smart Roster Detection, Adaptive Start Screen  
+- **Enables**: Enhanced user onboarding experience
+
+This onboarding system will guide new users through their first experience while providing valuable analytics for continuous improvement.

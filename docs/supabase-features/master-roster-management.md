@@ -1,1346 +1,1073 @@
-# Master Roster Management - Supabase Version
+# Master Roster Management - AI-Ready Implementation Plan
 
 ## Overview
-The Cloud-Enhanced Master Roster Management system provides comprehensive CRUD operations for the global player pool with full Supabase integration, real-time synchronization, and multi-device collaboration. Enhanced with advanced search capabilities, player analytics, bulk operations, and team collaboration features while maintaining clean separation from team-specific functionality.
+Enhance the existing roster management system with advanced features including bulk operations, advanced search and filtering, player analytics, activity tracking, import/export capabilities, and intelligent roster insights.
 
-## Enhanced Data Model (Supabase Tables)
+## Prerequisites Verification
+**BEFORE STARTING**: Verify all prerequisites are met
 
-### Core Players Management
+### Pre-Implementation Checks
+- [ ] **Environment**: `npm run dev` starts without errors
+- [ ] **Database Access**: Can access Supabase dashboard and run SQL queries
+- [ ] **Player System**: Existing players table and RosterSettingsModal working
+- [ ] **Current Roster**: Can add/edit/delete players in existing system
+- [ ] **Git State**: Working directory clean (`git status` shows no uncommitted changes)
+
+### Understanding Current Architecture
+**CRITICAL**: Read these files before proceeding:
+1. `src/components/RosterSettingsModal.tsx` - Current roster management modal
+2. `src/utils/playerStats.ts` - Current player statistics calculations
+3. `src/types/index.ts` - Current Player interface
+4. `src/lib/storage/supabaseProvider.ts` - How player data is stored
+
+**Verification Commands:**
+```bash
+# Check these files exist
+ls -la src/components/RosterSettingsModal.tsx src/utils/playerStats.ts
+
+# Find current player-related code
+grep -r "Player" src/types/ | head -3
+grep -r "roster\|player" src/components/ | head -5
+```
+
+## Progress Tracking
+
+### Phase 1: Database Enhancements (30 min total)
+- [ ] **Step 1.1**: Add player activity tracking table (8 min)
+- [ ] **Step 1.2**: Add player tags system (7 min)
+- [ ] **Step 1.3**: Add roster analytics table (8 min)
+- [ ] **Step 1.4**: Add bulk operation logs table (7 min)
+
+### Phase 2: Enhanced Player Types (20 min total)
+- [ ] **Step 2.1**: Extend Player interface with new fields (5 min)
+- [ ] **Step 2.2**: Add PlayerActivity interface (4 min)
+- [ ] **Step 2.3**: Add PlayerTag and BulkOperation interfaces (6 min)
+- [ ] **Step 2.4**: Add RosterAnalytics interface (5 min)
+
+### Phase 3: Advanced Player Operations (60 min total)
+- [ ] **Step 3.1**: Create enhanced player manager utility (20 min)
+- [ ] **Step 3.2**: Implement advanced search and filtering (15 min)
+- [ ] **Step 3.3**: Add bulk operations (delete, edit, tag) (15 min)
+- [ ] **Step 3.4**: Implement player analytics calculations (10 min)
+
+### Phase 4: Enhanced Roster Hooks (45 min total)
+- [ ] **Step 4.1**: Create useAdvancedRoster hook (20 min)
+- [ ] **Step 4.2**: Create usePlayerAnalytics hook (15 min)
+- [ ] **Step 4.3**: Create useBulkOperations hook (10 min)
+
+### Phase 5: Enhanced UI Components (90 min total)
+- [ ] **Step 5.1**: Create AdvancedSearchFilter component (25 min)
+- [ ] **Step 5.2**: Create BulkOperationsToolbar component (20 min)
+- [ ] **Step 5.3**: Create PlayerAnalyticsCard component (20 min)
+- [ ] **Step 5.4**: Create PlayerTagManager component (15 min)
+- [ ] **Step 5.5**: Enhance existing RosterSettingsModal (10 min)
+
+### Phase 6: Import/Export System (50 min total)
+- [ ] **Step 6.1**: Create CSV import/export utilities (20 min)
+- [ ] **Step 6.2**: Create ImportExportModal component (20 min)
+- [ ] **Step 6.3**: Add validation and error handling (10 min)
+
+### Phase 7: Activity Tracking (25 min total)
+- [ ] **Step 7.1**: Implement activity logging (15 min)
+- [ ] **Step 7.2**: Create ActivityTimeline component (10 min)
+
+### Phase 8: Testing & Validation (30 min total)
+- [ ] **Step 8.1**: Write unit tests for enhanced utilities (20 min)
+- [ ] **Step 8.2**: Manual integration testing (10 min)
+
+## Detailed Implementation Steps
+
+### Step 1.1: Add Player Activity Tracking Table
+**Estimated Time**: 8 minutes
+**Files Modified**: Supabase Database (via SQL Editor)
+
+**Pre-Checks:**
+- [ ] Can access Supabase dashboard
+- [ ] Players table exists (run: `SELECT * FROM players LIMIT 1;`)
+- [ ] Current database schema understood
+
+**Implementation:**
 ```sql
--- Enhanced players table with cloud features
-CREATE TABLE players (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  nickname TEXT,
-  email TEXT,
-  phone TEXT,
-  jersey_number TEXT,
-  position_primary TEXT,
-  position_secondary TEXT,
-  date_of_birth DATE,
-  height_cm INTEGER,
-  weight_kg INTEGER,
-  dominant_foot TEXT CHECK (dominant_foot IN ('left', 'right', 'both')),
-  notes TEXT,
-  is_goalie BOOLEAN DEFAULT FALSE,
-  received_fair_play_card BOOLEAN DEFAULT FALSE,
-  is_active BOOLEAN DEFAULT TRUE,
-  player_image_url TEXT, -- Cloud storage for player photos
-  emergency_contact JSONB DEFAULT '{}',
-  medical_info JSONB DEFAULT '{}',
-  preferences JSONB DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  -- Constraints
-  CONSTRAINT unique_user_jersey UNIQUE(user_id, jersey_number) DEFERRABLE INITIALLY DEFERRED,
-  CONSTRAINT valid_email CHECK (email IS NULL OR email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
-);
-
--- Player statistics cache for performance
-CREATE TABLE player_stats_cache (
+-- Step 1.1: Create player activity tracking
+CREATE TABLE player_activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-  total_games INTEGER DEFAULT 0,
-  total_goals INTEGER DEFAULT 0,
-  total_assists INTEGER DEFAULT 0,
-  total_saves INTEGER DEFAULT 0,
-  total_minutes_played INTEGER DEFAULT 0,
-  performance_rating DECIMAL(3,2),
-  last_game_date TIMESTAMP WITH TIME ZONE,
-  current_season_stats JSONB DEFAULT '{}',
-  career_stats JSONB DEFAULT '{}',
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  UNIQUE(user_id, player_id)
-);
-
--- Player activity tracking
-CREATE TABLE player_activity (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-  activity_type TEXT NOT NULL, -- 'created', 'updated', 'game_played', 'stat_added'
-  activity_data JSONB DEFAULT '{}',
-  performed_by UUID REFERENCES auth.users(id),
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Bulk operations tracking
-CREATE TABLE bulk_operations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  operation_type TEXT NOT NULL, -- 'import', 'export', 'bulk_update', 'bulk_delete'
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-  total_items INTEGER,
-  processed_items INTEGER DEFAULT 0,
-  failed_items INTEGER DEFAULT 0,
-  operation_data JSONB DEFAULT '{}',
-  error_log JSONB DEFAULT '[]',
+  activity_type TEXT NOT NULL CHECK (activity_type IN (
+    'created', 'updated', 'deleted', 'imported', 'exported',
+    'tagged', 'untagged', 'bulk_updated', 'stats_reset'
+  )),
+  activity_description TEXT NOT NULL,
+  changes JSONB DEFAULT '{}', -- What changed (before/after values)
+  metadata JSONB DEFAULT '{}', -- Additional context like bulk operation ID
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  completed_at TIMESTAMP WITH TIME ZONE
+  
+  -- Index for efficient queries
+  INDEX (user_id, created_at DESC),
+  INDEX (player_id, created_at DESC),
+  INDEX (activity_type)
 );
 
 -- Enable RLS
-ALTER TABLE players ENABLE ROW LEVEL SECURITY;
-ALTER TABLE player_stats_cache ENABLE ROW LEVEL SECURITY;
-ALTER TABLE player_activity ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bulk_operations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_activities ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-CREATE POLICY "Users can manage their own players" ON players
+-- Users can only see their own player activities
+CREATE POLICY "Users can manage their own player activities" ON player_activities
   FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view their own player stats" ON player_stats_cache
-  FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can view their own player activity" ON player_activity
-  FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage their own bulk operations" ON bulk_operations
-  FOR ALL USING (auth.uid() = user_id);
-
--- Indexes for performance
-CREATE INDEX idx_players_user_id ON players(user_id);
-CREATE INDEX idx_players_user_active ON players(user_id, is_active) WHERE is_active = TRUE;
-CREATE INDEX idx_players_name_search ON players USING GIN(to_tsvector('english', name || ' ' || COALESCE(nickname, '')));
-CREATE INDEX idx_players_jersey_number ON players(user_id, jersey_number) WHERE jersey_number IS NOT NULL;
-CREATE INDEX idx_player_stats_cache_player ON player_stats_cache(player_id);
-CREATE INDEX idx_player_activity_player_time ON player_activity(player_id, timestamp DESC);
+-- Add indexes explicitly (in case the inline ones didn't work)
+CREATE INDEX idx_player_activities_user_date ON player_activities(user_id, created_at DESC);
+CREATE INDEX idx_player_activities_player ON player_activities(player_id);
+CREATE INDEX idx_player_activities_type ON player_activities(activity_type);
 ```
 
-### Enhanced Player Interface
-**File**: `src/types/index.ts`
+**Immediate Verification:**
+```sql
+-- Verify table structure
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_name = 'player_activities' 
+ORDER BY ordinal_position;
+
+-- Should show 8 columns
+SELECT COUNT(*) as column_count 
+FROM information_schema.columns 
+WHERE table_name = 'player_activities';
+
+-- Test check constraint
+INSERT INTO player_activities (user_id, player_id, activity_type, activity_description) 
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 'invalid_type', 'test');
+-- Should fail due to CHECK constraint
+```
+
+**Validation Checklist:**
+- [ ] SQL executed without errors
+- [ ] Table has 8 columns: id, user_id, player_id, activity_type, activity_description, changes, metadata, created_at
+- [ ] CHECK constraint prevents invalid activity types
+- [ ] RLS policy created
+- [ ] Three indexes created successfully
+
+### Step 1.2: Add Player Tags System
+**Estimated Time**: 7 minutes
+**Files Modified**: Supabase Database
+
+**Pre-Checks:**
+- [ ] Step 1.1 completed successfully
+- [ ] Still in Supabase SQL Editor
+
+**Implementation:**
+```sql
+-- Step 1.2: Create player tags system
+CREATE TABLE player_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  color TEXT, -- Hex color for UI display
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  UNIQUE(user_id, name)
+);
+
+-- Junction table for player-tag relationships
+CREATE TABLE player_tag_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES player_tags(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  assigned_by UUID REFERENCES auth.users(id), -- Who assigned this tag
+  
+  UNIQUE(player_id, tag_id)
+);
+
+-- Enable RLS on both tables
+ALTER TABLE player_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_tag_assignments ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies
+CREATE POLICY "Users can manage their own player tags" ON player_tags
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own player tag assignments" ON player_tag_assignments
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Add indexes
+CREATE INDEX idx_player_tags_user ON player_tags(user_id);
+CREATE INDEX idx_player_tag_assignments_player ON player_tag_assignments(player_id);
+CREATE INDEX idx_player_tag_assignments_tag ON player_tag_assignments(tag_id);
+
+-- Insert some default tags for each user (via trigger)
+CREATE OR REPLACE FUNCTION create_default_player_tags()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO player_tags (user_id, name, color, description)
+  VALUES 
+    (NEW.id, 'Starter', '#22C55E', 'Regular starting players'),
+    (NEW.id, 'Substitute', '#F59E0B', 'Players who usually come off the bench'),
+    (NEW.id, 'Goalkeeper', '#3B82F6', 'Goal keepers'),
+    (NEW.id, 'Captain', '#8B5CF6', 'Team captains and leaders'),
+    (NEW.id, 'Injured', '#EF4444', 'Currently injured players')
+  ON CONFLICT (user_id, name) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger
+CREATE TRIGGER create_default_player_tags_trigger
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION create_default_player_tags();
+```
+
+**Immediate Verification:**
+```sql
+-- Verify both tables created
+SELECT table_name, column_name FROM information_schema.columns 
+WHERE table_name IN ('player_tags', 'player_tag_assignments')
+ORDER BY table_name, ordinal_position;
+
+-- Check if trigger function exists
+SELECT routine_name FROM information_schema.routines 
+WHERE routine_name = 'create_default_player_tags';
+```
+
+**Validation Checklist:**
+- [ ] Both tables created successfully
+- [ ] RLS policies on both tables
+- [ ] Indexes created
+- [ ] Trigger function created
+- [ ] Foreign key constraints working
+
+### Step 1.3: Add Roster Analytics Table
+**Estimated Time**: 8 minutes
+**Files Modified**: Supabase Database
+
+**Implementation:**
+```sql
+-- Step 1.3: Create roster analytics cache
+CREATE TABLE roster_analytics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  total_players INTEGER DEFAULT 0,
+  active_players INTEGER DEFAULT 0,
+  goalkeepers_count INTEGER DEFAULT 0,
+  average_age DECIMAL(4,1),
+  position_distribution JSONB DEFAULT '{}', -- {"forward": 5, "midfielder": 8, "defender": 7, "goalkeeper": 2}
+  tag_distribution JSONB DEFAULT '{}', -- {"starter": 11, "substitute": 11, "injured": 2}
+  activity_summary JSONB DEFAULT '{}', -- Recent activity counts
+  last_game_participation JSONB DEFAULT '{}', -- Who played in recent games
+  performance_trends JSONB DEFAULT '{}', -- Goals/assists trends
+  calculated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  UNIQUE(user_id)
+);
+
+-- Enable RLS
+ALTER TABLE roster_analytics ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their own analytics
+CREATE POLICY "Users can manage their own roster analytics" ON roster_analytics
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Add index
+CREATE INDEX idx_roster_analytics_user ON roster_analytics(user_id);
+CREATE INDEX idx_roster_analytics_calculated ON roster_analytics(calculated_at DESC);
+
+-- Function to recalculate roster analytics
+CREATE OR REPLACE FUNCTION recalculate_roster_analytics(target_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  -- This will be implemented in the application layer for complex calculations
+  -- This function serves as a placeholder for potential future use
+  UPDATE roster_analytics 
+  SET calculated_at = NOW() 
+  WHERE user_id = target_user_id;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Immediate Verification:**
+```sql
+-- Verify table structure
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_name = 'roster_analytics'
+ORDER BY ordinal_position;
+
+-- Verify function was created
+SELECT routine_name FROM information_schema.routines 
+WHERE routine_name = 'recalculate_roster_analytics';
+```
+
+**Validation Checklist:**
+- [ ] Table created with 11 columns
+- [ ] RLS policy created
+- [ ] Two indexes created
+- [ ] Placeholder function created
+- [ ] JSONB columns for complex data storage
+
+### Step 2.1: Extend Player Interface with New Fields
+**Estimated Time**: 5 minutes
+**Files Modified**: `src/types/index.ts`
+
+**Pre-Checks:**
+- [ ] File `src/types/index.ts` exists and is writable
+- [ ] Current Player interface exists in the file
+- [ ] Phase 1 database changes completed successfully
+
+**Implementation:**
+Add these interfaces and extend existing Player at the END of `src/types/index.ts`:
+
 ```typescript
-export interface CloudPlayer {
+// Master Roster Management Types - Added [CURRENT_DATE]
+
+// Enhanced Player interface (extends existing)
+export interface PlayerTag {
   id: string;
   userId: string;
   name: string;
-  nickname?: string;
-  email?: string;
-  phone?: string;
-  jerseyNumber?: string;
-  positionPrimary?: PlayerPosition;
-  positionSecondary?: PlayerPosition;
-  dateOfBirth?: string;
-  heightCm?: number;
-  weightKg?: number;
-  dominantFoot?: 'left' | 'right' | 'both';
-  notes?: string;
-  isGoalie?: boolean;
-  receivedFairPlayCard?: boolean;
-  isActive?: boolean;
-  playerImageUrl?: string;
-  emergencyContact?: {
-    name?: string;
-    phone?: string;
-    relationship?: string;
-  };
-  medicalInfo?: {
-    allergies?: string[];
-    medications?: string[];
-    conditions?: string[];
-    bloodType?: string;
-  };
-  preferences?: {
-    preferredPosition?: PlayerPosition;
-    availableDays?: string[];
-    skillLevel?: number;
-  };
-  // Cached stats
-  stats?: {
-    totalGames: number;
-    totalGoals: number;
-    totalAssists: number;
-    totalSaves: number;
-    performanceRating?: number;
-    lastGameDate?: string;
-  };
-  createdAt?: string;
-  updatedAt?: string;
+  color?: string; // Hex color like '#22C55E'
+  description?: string;
+  createdAt: string;
 }
 
-export type PlayerPosition = 
-  | 'goalkeeper' 
-  | 'defender' 
-  | 'midfielder' 
-  | 'forward'
-  | 'center-back'
-  | 'fullback'
-  | 'wing-back'
-  | 'defensive-midfielder'
-  | 'attacking-midfielder'
-  | 'winger'
-  | 'striker';
+export interface PlayerActivity {
+  id: string;
+  userId: string;
+  playerId: string;
+  activityType: 'created' | 'updated' | 'deleted' | 'imported' | 'exported' | 
+                'tagged' | 'untagged' | 'bulk_updated' | 'stats_reset';
+  activityDescription: string;
+  changes: Record<string, any>; // Before/after values
+  metadata: Record<string, any>; // Additional context
+  createdAt: string;
+}
+
+export interface PlayerTagAssignment {
+  id: string;
+  userId: string;
+  playerId: string;
+  tagId: string;
+  assignedAt: string;
+  assignedBy?: string;
+  // Populated from joins
+  tag?: PlayerTag;
+}
+
+// Enhanced player with additional computed fields
+export interface EnhancedPlayer extends Player {
+  tags?: PlayerTag[];
+  tagAssignments?: PlayerTagAssignment[];
+  recentActivity?: PlayerActivity[];
+  gamesPlayedCount?: number;
+  goalsPerGame?: number;
+  assistsPerGame?: number;
+  lastGameDate?: string;
+  performanceTrend?: 'improving' | 'declining' | 'stable';
+  activityScore?: number; // How active/engaged this player is
+}
+
+export interface RosterAnalytics {
+  id: string;
+  userId: string;
+  totalPlayers: number;
+  activePlayers: number;
+  goalkeepersCount: number;
+  averageAge?: number;
+  positionDistribution: Record<string, number>; // {forward: 5, midfielder: 8}
+  tagDistribution: Record<string, number>; // {starter: 11, substitute: 11}
+  activitySummary: Record<string, any>;
+  lastGameParticipation: Record<string, any>;
+  performanceTrends: Record<string, any>;
+  calculatedAt: string;
+}
 
 export interface BulkOperation {
   id: string;
-  userId: string;
-  operationType: 'import' | 'export' | 'bulk_update' | 'bulk_delete';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  totalItems: number;
-  processedItems: number;
-  failedItems: number;
-  operationData: any;
-  errorLog: string[];
-  createdAt: string;
-  completedAt?: string;
+  type: 'delete' | 'tag' | 'untag' | 'update_field';
+  playerIds: string[];
+  parameters: Record<string, any>; // Operation-specific parameters
+  results: {
+    successful: number;
+    failed: number;
+    errors: string[];
+  };
+  executedAt: string;
+  executedBy: string;
+}
+
+export interface PlayerSearchFilters {
+  query?: string; // Text search in name/nickname
+  tags?: string[]; // Filter by tag IDs
+  positions?: string[]; // Filter by positions
+  isGoalie?: boolean;
+  hasPlayedRecently?: boolean; // Played in last X games
+  performanceTrend?: 'improving' | 'declining' | 'stable';
+  ageRange?: {
+    min?: number;
+    max?: number;
+  };
+  statsRange?: {
+    goals?: { min?: number; max?: number };
+    assists?: { min?: number; max?: number };
+    gamesPlayed?: { min?: number; max?: number };
+  };
+}
+
+export interface RosterImportResult {
+  totalRows: number;
+  successful: number;
+  failed: number;
+  duplicates: number;
+  newPlayers: EnhancedPlayer[];
+  errors: Array<{
+    row: number;
+    field: string;
+    value: any;
+    error: string;
+  }>;
+}
+
+export interface RosterExportOptions {
+  format: 'csv' | 'json';
+  includeStats: boolean;
+  includeTags: boolean;
+  includeActivity: boolean;
+  filterByTags?: string[];
+  customFields?: string[]; // Additional fields to include
 }
 ```
 
-## Enhanced Data Operations
+**Immediate Verification:**
+```bash
+# Check TypeScript compilation
+npx tsc --noEmit
+# Should complete without errors
 
-### Advanced Player Queries
-**File**: `src/hooks/useCloudPlayerQueries.ts`
-```typescript
-export const useCloudMasterRoster = (options?: {
-  includeInactive?: boolean;
-  search?: string;
-  position?: PlayerPosition;
-  sortBy?: 'name' | 'jerseyNumber' | 'position' | 'lastPlayed';
-  sortDirection?: 'asc' | 'desc';
-}) => {
-  const { data: { user } } = useAuth();
-  
-  return useQuery({
-    queryKey: queryKeys.cloudMasterRoster(user?.id, options),
-    queryFn: async () => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      let query = supabase
-        .from('players')
-        .select(`
-          *,
-          stats:player_stats_cache(*)
-        `)
-        .eq('user_id', user.id);
-      
-      // Apply filters
-      if (!options?.includeInactive) {
-        query = query.eq('is_active', true);
-      }
-      
-      if (options?.search) {
-        query = query.or(`name.ilike.%${options.search}%,nickname.ilike.%${options.search}%,jersey_number.ilike.%${options.search}%`);
-      }
-      
-      if (options?.position) {
-        query = query.or(`position_primary.eq.${options.position},position_secondary.eq.${options.position}`);
-      }
-      
-      // Apply sorting
-      const sortBy = options?.sortBy || 'name';
-      const direction = options?.sortDirection || 'asc';
-      
-      switch (sortBy) {
-        case 'name':
-          query = query.order('name', { ascending: direction === 'asc' });
-          break;
-        case 'jerseyNumber':
-          query = query.order('jersey_number', { ascending: direction === 'asc', nullsLast: true });
-          break;
-        case 'position':
-          query = query.order('position_primary', { ascending: direction === 'asc', nullsLast: true });
-          break;
-        case 'lastPlayed':
-          query = query.order('updated_at', { ascending: direction === 'asc' });
-          break;
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw new StorageError('supabase', 'getCloudMasterRoster', error);
-      return data.map(transformCloudPlayerFromSupabase);
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-export const useCreateCloudPlayer = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (playerData: Omit<CloudPlayer, 'id' | 'userId'>) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // Validate unique jersey number
-      if (playerData.jerseyNumber) {
-        const { data: existing } = await supabase
-          .from('players')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('jersey_number', playerData.jerseyNumber)
-          .eq('is_active', true)
-          .single();
-        
-        if (existing) {
-          throw new ValidationError('Jersey number already exists');
-        }
-      }
-      
-      const supabasePlayer = transformCloudPlayerToSupabase(
-        { ...playerData, userId: user.id }, 
-        user.id
-      );
-      
-      const { data, error } = await supabase
-        .from('players')
-        .insert([supabasePlayer])
-        .select(`
-          *,
-          stats:player_stats_cache(*)
-        `)
-        .single();
-      
-      if (error) {
-        if (error.code === '23505' && error.constraint === 'unique_user_jersey') {
-          throw new ValidationError('Jersey number already exists');
-        }
-        throw new StorageError('supabase', 'createCloudPlayer', error);
-      }
-      
-      // Initialize player stats cache
-      await supabase
-        .from('player_stats_cache')
-        .insert([{
-          user_id: user.id,
-          player_id: data.id,
-          total_games: 0,
-          total_goals: 0,
-          total_assists: 0,
-          total_saves: 0,
-          total_minutes_played: 0
-        }]);
-      
-      // Track activity
-      await supabase
-        .from('player_activity')
-        .insert([{
-          user_id: user.id,
-          player_id: data.id,
-          activity_type: 'created',
-          activity_data: { name: playerData.name },
-          performed_by: user.id
-        }]);
-      
-      return transformCloudPlayerFromSupabase(data);
-    },
-    onSuccess: (data) => {
-      // Invalidate relevant caches
-      queryClient.invalidateQueries(queryKeys.cloudMasterRoster(user?.id));
-      queryClient.invalidateQueries(queryKeys.playerSearch(user?.id));
-      
-      toast.success(`${data.name} added to cloud roster`);
-    },
-    // Optimistic update
-    onMutate: async (newPlayer) => {
-      if (!user) return;
-      
-      await queryClient.cancelQueries(queryKeys.cloudMasterRoster(user.id));
-      const previousPlayers = queryClient.getQueryData(queryKeys.cloudMasterRoster(user.id));
-      
-      queryClient.setQueryData(queryKeys.cloudMasterRoster(user.id), (old: CloudPlayer[] = []) => [
-        ...old,
-        { ...newPlayer, id: `temp-${Date.now()}`, userId: user.id }
-      ]);
-      
-      return { previousPlayers };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousPlayers && user) {
-        queryClient.setQueryData(queryKeys.cloudMasterRoster(user.id), context.previousPlayers);
-      }
-      
-      if (err instanceof ValidationError) {
-        toast.error(err.message);
-      } else {
-        toast.error('Failed to add player. Please try again.');
-      }
-    },
-  });
-};
-
-export const useUpdateCloudPlayer = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      playerId, 
-      updates 
-    }: { 
-      playerId: string; 
-      updates: Partial<CloudPlayer> 
-    }) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // Validate jersey number uniqueness if updating
-      if (updates.jerseyNumber) {
-        const { data: existing } = await supabase
-          .from('players')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('jersey_number', updates.jerseyNumber)
-          .eq('is_active', true)
-          .neq('id', playerId)
-          .single();
-        
-        if (existing) {
-          throw new ValidationError('Jersey number already exists');
-        }
-      }
-      
-      const supabaseUpdates = transformCloudPlayerToSupabase(
-        { ...updates, updatedAt: new Date().toISOString() }, 
-        user.id
-      );
-      
-      const { data, error } = await supabase
-        .from('players')
-        .update(supabaseUpdates)
-        .eq('id', playerId)
-        .eq('user_id', user.id)
-        .select(`
-          *,
-          stats:player_stats_cache(*)
-        `)
-        .single();
-      
-      if (error) {
-        if (error.code === '23505' && error.constraint === 'unique_user_jersey') {
-          throw new ValidationError('Jersey number already exists');
-        }
-        throw new StorageError('supabase', 'updateCloudPlayer', error);
-      }
-      
-      // Track activity
-      await supabase
-        .from('player_activity')
-        .insert([{
-          user_id: user.id,
-          player_id: playerId,
-          activity_type: 'updated',
-          activity_data: updates,
-          performed_by: user.id
-        }]);
-      
-      return transformCloudPlayerFromSupabase(data);
-    },
-    onSuccess: (data) => {
-      // Invalidate specific caches
-      queryClient.invalidateQueries(queryKeys.cloudMasterRoster(user?.id));
-      queryClient.invalidateQueries(queryKeys.cloudPlayer(data.id));
-      
-      toast.success(`${data.name} updated and synced`);
-    },
-    onError: (err) => {
-      if (err instanceof ValidationError) {
-        toast.error(err.message);
-      } else {
-        toast.error('Failed to update player. Please try again.');
-      }
-    },
-  });
-};
-
-export const useCloudGoalkeeperManagement = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async ({ playerId, isGoalie }: { playerId: string; isGoalie: boolean }) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // If setting as goalie, unset all other goalies first
-      if (isGoalie) {
-        await supabase
-          .from('players')
-          .update({ is_goalie: false })
-          .eq('user_id', user.id)
-          .eq('is_goalie', true)
-          .neq('id', playerId);
-      }
-      
-      // Set the target player's goalkeeper status
-      const { data, error } = await supabase
-        .from('players')
-        .update({ 
-          is_goalie: isGoalie,
-          position_primary: isGoalie ? 'goalkeeper' : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', playerId)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-      
-      if (error) throw new StorageError('supabase', 'updateGoalkeeperStatus', error);
-      
-      // Track activity
-      await supabase
-        .from('player_activity')
-        .insert([{
-          user_id: user.id,
-          player_id: playerId,
-          activity_type: 'updated',
-          activity_data: { goalieStatusChanged: isGoalie },
-          performed_by: user.id
-        }]);
-      
-      return transformCloudPlayerFromSupabase(data);
-    },
-    onSuccess: () => {
-      // Invalidate all player caches to update goalie status
-      queryClient.invalidateQueries(queryKeys.cloudMasterRoster(user?.id));
-      toast.success('Goalkeeper status updated and synced');
-    },
-    onError: () => {
-      toast.error('Failed to update goalkeeper status');
-    },
-  });
-};
+# Verify interfaces were added
+tail -50 src/types/index.ts | grep -E "(interface|export)"
 ```
 
-### Bulk Operations Support
-**File**: `src/hooks/useBulkPlayerOperations.ts`
+**Validation Checklist:**
+- [ ] TypeScript compilation passes
+- [ ] All new interfaces properly exported
+- [ ] EnhancedPlayer extends existing Player interface
+- [ ] No naming conflicts with existing types
+- [ ] Git diff shows only expected additions
+
+### Step 3.1: Create Enhanced Player Manager Utility
+**Estimated Time**: 20 minutes
+**Files Created**: `src/utils/enhancedPlayerManager.ts`
+
+**Pre-Checks:**
+- [ ] Directory `src/utils/` exists
+- [ ] Step 2.1 completed (types available)
+- [ ] Can import from existing utilities
+
+**Implementation:**
+Create the new file:
+
 ```typescript
-export const useBulkImportPlayers = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (importData: {
-      players: Partial<CloudPlayer>[];
-      options: {
-        skipDuplicates: boolean;
-        updateExisting: boolean;
-      };
-    }) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // Create bulk operation record
-      const { data: bulkOp, error: bulkError } = await supabase
-        .from('bulk_operations')
-        .insert([{
-          user_id: user.id,
-          operation_type: 'import',
-          status: 'processing',
-          total_items: importData.players.length,
-          operation_data: importData.options
-        }])
-        .select()
-        .single();
-      
-      if (bulkError) throw new StorageError('supabase', 'createBulkOperation', bulkError);
-      
-      const results = {
-        successful: [] as CloudPlayer[],
-        failed: [] as { player: Partial<CloudPlayer>; error: string }[],
-        updated: [] as CloudPlayer[]
-      };
-      
-      // Process players in batches
-      const batchSize = 50;
-      for (let i = 0; i < importData.players.length; i += batchSize) {
-        const batch = importData.players.slice(i, i + batchSize);
-        
-        for (const playerData of batch) {
-          try {
-            // Check for existing player by name or jersey number
-            let existingPlayer = null;
-            if (playerData.jerseyNumber) {
-              const { data } = await supabase
-                .from('players')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('jersey_number', playerData.jerseyNumber)
-                .eq('is_active', true)
-                .single();
-              existingPlayer = data;
-            }
-            
-            if (!existingPlayer && playerData.name) {
-              const { data } = await supabase
-                .from('players')
-                .select('*')
-                .eq('user_id', user.id)
-                .ilike('name', playerData.name)
-                .eq('is_active', true)
-                .single();
-              existingPlayer = data;
-            }
-            
-            if (existingPlayer) {
-              if (importData.options.skipDuplicates) {
-                continue;
-              } else if (importData.options.updateExisting) {
-                // Update existing player
-                const supabaseUpdates = transformCloudPlayerToSupabase(
-                  { ...playerData, updatedAt: new Date().toISOString() },
-                  user.id
-                );
-                
-                const { data, error } = await supabase
-                  .from('players')
-                  .update(supabaseUpdates)
-                  .eq('id', existingPlayer.id)
-                  .select()
-                  .single();
-                
-                if (error) throw error;
-                results.updated.push(transformCloudPlayerFromSupabase(data));
-              } else {
-                results.failed.push({
-                  player: playerData,
-                  error: 'Player already exists'
-                });
-              }
-            } else {
-              // Create new player
-              const supabasePlayer = transformCloudPlayerToSupabase(
-                { ...playerData, userId: user.id },
-                user.id
-              );
-              
-              const { data, error } = await supabase
-                .from('players')
-                .insert([supabasePlayer])
-                .select()
-                .single();
-              
-              if (error) throw error;
-              
-              // Initialize stats cache
-              await supabase
-                .from('player_stats_cache')
-                .insert([{
-                  user_id: user.id,
-                  player_id: data.id,
-                  total_games: 0,
-                  total_goals: 0,
-                  total_assists: 0
-                }]);
-              
-              results.successful.push(transformCloudPlayerFromSupabase(data));
-            }
-            
-            // Update progress
-            await supabase
-              .from('bulk_operations')
-              .update({ 
-                processed_items: results.successful.length + results.updated.length + results.failed.length 
-              })
-              .eq('id', bulkOp.id);
-            
-          } catch (error) {
-            results.failed.push({
-              player: playerData,
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-          }
-        }
-      }
-      
-      // Complete bulk operation
-      await supabase
-        .from('bulk_operations')
-        .update({
-          status: results.failed.length === 0 ? 'completed' : 'completed',
-          processed_items: results.successful.length + results.updated.length,
-          failed_items: results.failed.length,
-          error_log: results.failed.map(f => f.error),
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', bulkOp.id);
-      
-      return results;
-    },
-    onSuccess: (results) => {
-      queryClient.invalidateQueries(queryKeys.cloudMasterRoster(user?.id));
-      
-      toast.success(
-        `Import completed: ${results.successful.length} added, ${results.updated.length} updated, ${results.failed.length} failed`
-      );
-    },
-    onError: (error) => {
-      toast.error('Bulk import failed. Please try again.');
-    },
-  });
-};
+// src/utils/enhancedPlayerManager.ts
+import { supabase } from '../lib/supabase';
+import type { 
+  EnhancedPlayer, PlayerTag, PlayerActivity, PlayerTagAssignment, 
+  RosterAnalytics, BulkOperation, PlayerSearchFilters, RosterImportResult 
+} from '../types';
+import { StorageError, NetworkError, AuthenticationError } from '../lib/storage/types';
 
-export const useExportPlayers = () => {
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (options: {
-      format: 'csv' | 'json' | 'excel';
-      includeStats: boolean;
-      includeInactive: boolean;
-    }) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // Get players with optional stats
-      let query = supabase
-        .from('players')
-        .select(options.includeStats 
-          ? `*, stats:player_stats_cache(*)`
-          : '*'
-        )
-        .eq('user_id', user.id);
-      
-      if (!options.includeInactive) {
-        query = query.eq('is_active', true);
-      }
-      
-      const { data, error } = await query.order('name');
-      
-      if (error) throw new StorageError('supabase', 'exportPlayers', error);
-      
-      const players = data.map(transformCloudPlayerFromSupabase);
-      
-      // Format data based on requested format
-      switch (options.format) {
-        case 'csv':
-          return generateCSV(players, options.includeStats);
-        case 'json':
-          return JSON.stringify(players, null, 2);
-        case 'excel':
-          return generateExcel(players, options.includeStats);
-        default:
-          throw new Error('Unsupported export format');
-      }
-    },
-    onSuccess: (exportData, variables) => {
-      // Create download
-      const blob = new Blob([exportData], {
-        type: variables.format === 'csv' ? 'text/csv' : 'application/json'
-      });
-      
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `players_export_${new Date().toISOString().split('T')[0]}.${variables.format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast.success('Player data exported successfully');
-    },
-    onError: () => {
-      toast.error('Failed to export player data');
-    },
-  });
-};
-```
-
-## Real-time Synchronization
-
-### Advanced Player Sync
-**File**: `src/hooks/useCloudPlayerRealtimeSync.ts`
-```typescript
-export const useCloudPlayerRealtimeSync = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel('cloud_players_sync')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'players',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Invalidate player caches
-          queryClient.invalidateQueries(queryKeys.cloudMasterRoster(user.id));
-          
-          if (payload.eventType === 'INSERT' && payload.new) {
-            // Show real-time notification for new player
-            const player = transformCloudPlayerFromSupabase(payload.new);
-            toast.success(`${player.name} added to roster and synced`, {
-              id: `player-added-${player.id}`,
-              duration: 3000
-            });
-          } else if (payload.eventType === 'UPDATE' && payload.new && payload.old) {
-            // Handle specific update notifications
-            const newPlayer = transformCloudPlayerFromSupabase(payload.new);
-            const oldPlayer = transformCloudPlayerFromSupabase(payload.old);
-            
-            if (newPlayer.isGoalie !== oldPlayer.isGoalie) {
-              toast.info(
-                `${newPlayer.name} ${newPlayer.isGoalie ? 'set as' : 'removed from'} goalkeeper`,
-                { id: `goalie-change-${newPlayer.id}` }
-              );
-            }
-          } else if (payload.eventType === 'DELETE' && payload.old) {
-            // Handle player deletion
-            const deletedPlayer = transformCloudPlayerFromSupabase(payload.old);
-            toast.info(`${deletedPlayer.name} removed from roster`, {
-              id: `player-deleted-${deletedPlayer.id}`,
-              duration: 3000
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'player_stats_cache',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Invalidate player stats when cache updates
-          if (payload.new?.player_id) {
-            queryClient.invalidateQueries(queryKeys.cloudPlayer(payload.new.player_id));
-            queryClient.invalidateQueries(queryKeys.playerStats(payload.new.player_id));
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bulk_operations',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Update bulk operation status in real-time
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            queryClient.invalidateQueries(queryKeys.bulkOperations(user.id));
-            
-            const operation = payload.new;
-            if (operation.status === 'completed') {
-              toast.success(`Bulk ${operation.operation_type} completed`, {
-                id: `bulk-op-${operation.id}`
-              });
-            } else if (operation.status === 'failed') {
-              toast.error(`Bulk ${operation.operation_type} failed`, {
-                id: `bulk-op-${operation.id}`
-              });
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, user]);
-};
-```
-
-## Enhanced UI Implementation
-
-### Cloud-Enhanced Roster Settings Modal
-**File**: `src/components/CloudRosterSettingsModal.tsx`
-```typescript
-export const CloudRosterSettingsModal: React.FC<CloudRosterSettingsModalProps> = ({
-  isOpen,
-  onClose,
-}) => {
-  const { data: players = [], isLoading } = useCloudMasterRoster();
-  const createPlayer = useCreateCloudPlayer();
-  const updatePlayer = useUpdateCloudPlayer();
-  const deletePlayer = useDeleteCloudPlayer();
-  const setGoalkeeper = useCloudGoalkeeperManagement();
-  const importPlayers = useBulkImportPlayers();
-  const exportPlayers = useExportPlayers();
-  
-  // Real-time sync
-  useCloudPlayerRealtimeSync();
-  
-  // Enhanced state management
-  const [searchQuery, setSearchQuery] = useState('');
-  const [positionFilter, setPositionFilter] = useState<PlayerPosition | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'jerseyNumber' | 'position'>('name');
-  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'cards'>('list');
-  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
-  const [showInactive, setShowInactive] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  const [showPlayerDetails, setShowPlayerDetails] = useState<string | null>(null);
-  
-  // Advanced filtering
-  const filteredPlayers = useMemo(() => {
-    return players.filter(player => {
-      const matchesSearch = !searchQuery || 
-        player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.jerseyNumber?.includes(searchQuery);
-      
-      const matchesPosition = positionFilter === 'all' || 
-        player.positionPrimary === positionFilter ||
-        player.positionSecondary === positionFilter;
-      
-      const matchesActive = showInactive || player.isActive;
-      
-      return matchesSearch && matchesPosition && matchesActive;
-    }).sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'jerseyNumber':
-          const aNum = parseInt(a.jerseyNumber || '999');
-          const bNum = parseInt(b.jerseyNumber || '999');
-          return aNum - bNum;
-        case 'position':
-          const aPos = a.positionPrimary || 'zzz';
-          const bPos = b.positionPrimary || 'zzz';
-          return aPos.localeCompare(bPos);
-        default:
-          return 0;
-      }
-    });
-  }, [players, searchQuery, positionFilter, sortBy, showInactive]);
-  
-  const handleBulkExport = async (format: 'csv' | 'json' | 'excel') => {
-    try {
-      await exportPlayers.mutateAsync({
-        format,
-        includeStats: true,
-        includeInactive: showInactive
-      });
-    } catch (error) {
-      toast.error('Export failed. Please try again.');
+export class EnhancedPlayerManager {
+  private async getCurrentUserId(): Promise<string> {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      throw new AuthenticationError('supabase', 'getCurrentUserId', error || new Error('No user'));
     }
-  };
-  
-  const handleBulkDelete = async () => {
-    if (selectedPlayers.size === 0) return;
-    
-    const playerNames = filteredPlayers
-      .filter(p => selectedPlayers.has(p.id))
-      .map(p => p.name);
-    
-    const confirmed = window.confirm(
-      `Delete ${selectedPlayers.size} players: ${playerNames.join(', ')}?\n\nThis will also remove them from all teams and games. This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-    
-    try {
-      for (const playerId of selectedPlayers) {
-        await deletePlayer.mutateAsync(playerId);
-      }
-      setSelectedPlayers(new Set());
-      toast.success(`${selectedPlayers.size} players deleted`);
-    } catch (error) {
-      toast.error('Failed to delete some players');
-    }
-  };
-  
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Cloud Master Roster"
-      size="large"
-      className="h-full max-h-[95vh]"
-    >
-      <div className="flex flex-col h-full">
-        {/* Enhanced Header with Cloud Features */}
-        <div className="flex-shrink-0 border-b border-slate-700/50 pb-4 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-white">Master Roster</h2>
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <HiOutlineCloud className="w-4 h-4 text-emerald-400" />
-                <span>Cloud Synced</span>
-                <span className="text-slate-600">•</span>
-                <span>{filteredPlayers.length} players</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {/* Bulk actions */}
-              {selectedPlayers.size > 0 && (
-                <div className="flex items-center gap-2 mr-4">
-                  <span className="text-sm text-slate-300">{selectedPlayers.size} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
-                  >
-                    Delete Selected
-                  </button>
-                </div>
-              )}
-              
-              {/* View mode toggle */}
-              <div className="flex bg-slate-800 rounded-lg p-1">
-                {(['list', 'grid', 'cards'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      viewMode === mode
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:text-slate-300'
-                    }`}
-                  >
-                    {mode === 'list' && <HiOutlineListBullet className="w-4 h-4" />}
-                    {mode === 'grid' && <HiOutlineSquares2X2 className="w-4 h-4" />}
-                    {mode === 'cards' && <HiOutlineRectangleGroup className="w-4 h-4" />}
-                  </button>
-                ))}
-              </div>
-              
-              {/* Import/Export */}
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setShowBulkImport(true)}
-                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded transition-colors"
-                >
-                  <HiOutlineArrowUpTray className="w-4 h-4" />
-                </button>
-                
-                <Dropdown
-                  trigger={
-                    <button className="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded transition-colors">
-                      <HiOutlineArrowDownTray className="w-4 h-4" />
-                    </button>
-                  }
-                  items={[
-                    { label: 'Export as CSV', onClick: () => handleBulkExport('csv') },
-                    { label: 'Export as JSON', onClick: () => handleBulkExport('json') },
-                    { label: 'Export as Excel', onClick: () => handleBulkExport('excel') },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Enhanced Filters */}
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Search */}
-            <div className="flex-1 min-w-64">
-              <div className="relative">
-                <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search players, jerseys, positions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                  >
-                    <HiOutlineXMark className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {/* Position Filter */}
-            <select
-              value={positionFilter}
-              onChange={(e) => setPositionFilter(e.target.value as PlayerPosition | 'all')}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">All Positions</option>
-              <option value="goalkeeper">Goalkeeper</option>
-              <option value="defender">Defender</option>
-              <option value="midfielder">Midfielder</option>
-              <option value="forward">Forward</option>
-            </select>
-            
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'name' | 'jerseyNumber' | 'position')}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="name">Sort by Name</option>
-              <option value="jerseyNumber">Sort by Jersey #</option>
-              <option value="position">Sort by Position</option>
-            </select>
-            
-            {/* Show inactive toggle */}
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 bg-slate-700 border border-slate-600 rounded focus:ring-indigo-500"
-              />
-              Show inactive
-            </label>
-          </div>
-        </div>
-        
-        {/* Players List/Grid */}
-        <div className="flex-1 overflow-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex items-center gap-3 text-slate-300">
-                <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                Loading cloud roster...
-              </div>
-            </div>
-          ) : filteredPlayers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-              <HiOutlineUsers className="w-16 h-16 mb-4 text-slate-600" />
-              <p className="text-lg font-medium mb-2">No players found</p>
-              <p className="text-sm">
-                {searchQuery || positionFilter !== 'all' 
-                  ? 'Try adjusting your filters'
-                  : 'Add players to get started'
-                }
-              </p>
-            </div>
-          ) : (
-            <CloudPlayerList
-              players={filteredPlayers}
-              viewMode={viewMode}
-              selectedPlayers={selectedPlayers}
-              onSelectPlayer={(playerId, selected) => {
-                setSelectedPlayers(prev => {
-                  const newSet = new Set(prev);
-                  if (selected) {
-                    newSet.add(playerId);
-                  } else {
-                    newSet.delete(playerId);
-                  }
-                  return newSet;
-                });
-              }}
-              onEditPlayer={setEditingPlayer}
-              onDeletePlayer={(playerId) => {
-                const player = filteredPlayers.find(p => p.id === playerId);
-                if (player && window.confirm(`Delete ${player.name}? This cannot be undone.`)) {
-                  deletePlayer.mutate(playerId);
-                }
-              }}
-              onSetGoalkeeper={(playerId, isGoalie) => {
-                setGoalkeeper.mutate({ playerId, isGoalie });
-              }}
-              onViewDetails={setShowPlayerDetails}
-              editingPlayerId={editingPlayer}
-              onCancelEdit={() => setEditingPlayer(null)}
-              onSaveEdit={(playerId, updates) => {
-                updatePlayer.mutate({ playerId, updates });
-                setEditingPlayer(null);
-              }}
-            />
-          )}
-        </div>
-        
-        {/* Add Player Section */}
-        <div className="flex-shrink-0 border-t border-slate-700/50 pt-4 mt-4">
-          <CloudAddPlayerForm
-            onAddPlayer={(playerData) => {
-              createPlayer.mutate(playerData);
-            }}
-            isLoading={createPlayer.isPending}
-          />
-        </div>
-      </div>
-      
-      {/* Bulk Import Modal */}
-      {showBulkImport && (
-        <BulkImportModal
-          isOpen={showBulkImport}
-          onClose={() => setShowBulkImport(false)}
-          onImport={(data, options) => {
-            importPlayers.mutate({ players: data, options });
-          }}
-          isImporting={importPlayers.isPending}
-        />
-      )}
-      
-      {/* Player Details Modal */}
-      {showPlayerDetails && (
-        <PlayerDetailsModal
-          isOpen={!!showPlayerDetails}
-          onClose={() => setShowPlayerDetails(null)}
-          playerId={showPlayerDetails}
-        />
-      )}
-    </Modal>
-  );
-};
-```
-
-## Migration from localStorage Version
-
-### Enhanced Data Migration
-**File**: `src/utils/migration/migrateRosterToSupabase.ts`
-```typescript
-export const migrateCloudRosterToSupabase = async (userId: string) => {
-  // 1. Extract localStorage master roster
-  const rosterJson = localStorage.getItem('soccerMasterRoster');
-  if (!rosterJson) return;
-  
-  try {
-    const localPlayers = JSON.parse(rosterJson) as Player[];
-    
-    if (localPlayers.length === 0) return;
-    
-    // 2. Transform to enhanced cloud format
-    const cloudPlayers = localPlayers.map(player => ({
-      user_id: userId,
-      name: player.name.trim(),
-      nickname: player.nickname?.trim() || null,
-      jersey_number: player.jerseyNumber?.trim() || null,
-      position_primary: mapLegacyPosition(player.position) || null,
-      notes: player.notes?.trim() || null,
-      is_goalie: player.isGoalie || false,
-      received_fair_play_card: player.receivedFairPlayCard || false,
-      is_active: true,
-      // Default values for new cloud fields
-      email: null,
-      phone: null,
-      position_secondary: null,
-      date_of_birth: null,
-      height_cm: null,
-      weight_kg: null,
-      dominant_foot: null,
-      player_image_url: null,
-      emergency_contact: {},
-      medical_info: {},
-      preferences: {}
-    }));
-    
-    // 3. Batch insert to Supabase
-    const { data: insertedPlayers, error } = await supabase
-      .from('players')
-      .insert(cloudPlayers)
-      .select();
-    
-    if (error) throw new StorageError('supabase', 'migrateCloudRoster', error);
-    
-    // 4. Initialize player stats cache
-    const statsCache = insertedPlayers.map(player => ({
-      user_id: userId,
-      player_id: player.id,
-      total_games: 0,
-      total_goals: 0,
-      total_assists: 0,
-      total_saves: 0,
-      total_minutes_played: 0,
-      current_season_stats: {},
-      career_stats: {}
-    }));
-    
-    await supabase
-      .from('player_stats_cache')
-      .insert(statsCache);
-    
-    // 5. Track migration activity
-    const activities = insertedPlayers.map(player => ({
-      user_id: userId,
-      player_id: player.id,
-      activity_type: 'created',
-      activity_data: { migrated: true, originalName: player.name },
-      performed_by: userId
-    }));
-    
-    await supabase
-      .from('player_activity')
-      .insert(activities);
-    
-    // 6. Clean up localStorage
-    localStorage.removeItem('soccerMasterRoster');
-    
-    logger.info(`Migrated ${insertedPlayers.length} players to cloud roster`);
-    return insertedPlayers.length;
-    
-  } catch (error) {
-    logger.error('Failed to migrate cloud roster:', error);
-    throw error;
+    return user.id;
   }
-};
 
-const mapLegacyPosition = (position?: string): PlayerPosition | null => {
-  if (!position) return null;
-  
-  const positionMap: Record<string, PlayerPosition> = {
-    'GK': 'goalkeeper',
-    'DEF': 'defender',
-    'MID': 'midfielder',
-    'FWD': 'forward',
-    'goalkeeper': 'goalkeeper',
-    'defender': 'defender',
-    'midfielder': 'midfielder',
-    'forward': 'forward'
-  };
-  
-  return positionMap[position] || null;
-};
+  // Get enhanced players with tags, activity, and computed stats
+  async getEnhancedPlayers(filters?: PlayerSearchFilters): Promise<EnhancedPlayer[]> {
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      // Base query with joins for tags and recent activity
+      let query = supabase
+        .from('players')
+        .select(`
+          *,
+          player_tag_assignments!inner(
+            *,
+            player_tags(*)
+          ),
+          player_activities!left(
+            *
+          )
+        `)
+        .eq('user_id', userId);
+
+      // Apply filters
+      if (filters?.query) {
+        query = query.or(`name.ilike.%${filters.query}%,nickname.ilike.%${filters.query}%`);
+      }
+
+      if (filters?.isGoalie !== undefined) {
+        query = query.eq('is_goalie', filters.isGoalie);
+      }
+
+      if (filters?.tags && filters.tags.length > 0) {
+        // This requires a more complex query - we'll handle it in post-processing
+      }
+
+      const { data, error } = await query.order('name');
+      if (error) throw error;
+
+      // Transform and enhance the data
+      const enhancedPlayers = await Promise.all((data || []).map(async (playerData) => {
+        const enhanced = await this.enhancePlayerData(playerData);
+        
+        // Apply complex filters that couldn't be done in SQL
+        if (filters && !this.playerMatchesFilters(enhanced, filters)) {
+          return null;
+        }
+        
+        return enhanced;
+      }));
+
+      return enhancedPlayers.filter(Boolean) as EnhancedPlayer[];
+    } catch (error) {
+      throw new StorageError('Failed to get enhanced players', 'supabase', 'getEnhancedPlayers', error as Error);
+    }
+  }
+
+  // Get or create player tags
+  async getPlayerTags(): Promise<PlayerTag[]> {
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      const { data, error } = await supabase
+        .from('player_tags')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name');
+
+      if (error) throw error;
+      return (data || []).map(this.transformTagFromSupabase);
+    } catch (error) {
+      throw new StorageError('Failed to get player tags', 'supabase', 'getPlayerTags', error as Error);
+    }
+  }
+
+  // Create a new player tag
+  async createPlayerTag(tag: Omit<PlayerTag, 'id' | 'userId' | 'createdAt'>): Promise<PlayerTag> {
+    try {
+      const userId = await this.getCurrentUserId();
+
+      const { data, error } = await supabase
+        .from('player_tags')
+        .insert({
+          user_id: userId,
+          name: tag.name.trim(),
+          color: tag.color || '#6B7280',
+          description: tag.description?.trim() || null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new StorageError('Tag name already exists', 'supabase', 'createPlayerTag', new Error('Tag name already exists'));
+        }
+        throw error;
+      }
+
+      return this.transformTagFromSupabase(data);
+    } catch (error) {
+      if (error instanceof StorageError) throw error;
+      throw new StorageError('Failed to create player tag', 'supabase', 'createPlayerTag', error as Error);
+    }
+  }
+
+  // Assign tag to player
+  async assignTagToPlayer(playerId: string, tagId: string): Promise<PlayerTagAssignment> {
+    try {
+      const userId = await this.getCurrentUserId();
+
+      const { data, error } = await supabase
+        .from('player_tag_assignments')
+        .insert({
+          user_id: userId,
+          player_id: playerId,
+          tag_id: tagId,
+          assigned_by: userId
+        })
+        .select(`
+          *,
+          player_tags(*)
+        `)
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new StorageError('supabase', 'assignTagToPlayer', new Error('Player already has this tag'));
+        }
+        throw error;
+      }
+
+      // Log the activity
+      await this.logPlayerActivity(playerId, 'tagged', `Tagged with "${data.player_tags.name}"`, {
+        tagId,
+        tagName: data.player_tags.name
+      });
+
+      return this.transformTagAssignmentFromSupabase(data);
+    } catch (error) {
+      if (error instanceof StorageError) throw error;
+      throw new StorageError('supabase', 'assignTagToPlayer', error as Error);
+    }
+  }
+
+  // Remove tag from player
+  async removeTagFromPlayer(playerId: string, tagId: string): Promise<void> {
+    try {
+      const userId = await this.getCurrentUserId();
+
+      // Get tag name for logging
+      const { data: tagData } = await supabase
+        .from('player_tag_assignments')
+        .select(`
+          *,
+          player_tags(name)
+        `)
+        .eq('user_id', userId)
+        .eq('player_id', playerId)
+        .eq('tag_id', tagId)
+        .single();
+
+      const { error } = await supabase
+        .from('player_tag_assignments')
+        .delete()
+        .eq('user_id', userId)
+        .eq('player_id', playerId)
+        .eq('tag_id', tagId);
+
+      if (error) throw error;
+
+      // Log the activity
+      if (tagData?.player_tags?.name) {
+        await this.logPlayerActivity(playerId, 'untagged', `Removed tag "${tagData.player_tags.name}"`, {
+          tagId,
+          tagName: tagData.player_tags.name
+        });
+      }
+    } catch (error) {
+      throw new StorageError('supabase', 'removeTagFromPlayer', error as Error);
+    }
+  }
+
+  // Bulk operations
+  async executeBulkOperation(operation: Omit<BulkOperation, 'id' | 'executedAt' | 'executedBy'>): Promise<BulkOperation> {
+    const userId = await this.getCurrentUserId();
+    const results = {
+      successful: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      for (const playerId of operation.playerIds) {
+        try {
+          switch (operation.type) {
+            case 'tag':
+              await this.assignTagToPlayer(playerId, operation.parameters.tagId);
+              results.successful++;
+              break;
+            case 'untag':
+              await this.removeTagFromPlayer(playerId, operation.parameters.tagId);
+              results.successful++;
+              break;
+            case 'delete':
+              await supabase.from('players').delete().eq('id', playerId).eq('user_id', userId);
+              results.successful++;
+              break;
+            default:
+              throw new Error(`Unsupported operation type: ${operation.type}`);
+          }
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Player ${playerId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      const bulkOp: BulkOperation = {
+        id: crypto.randomUUID(),
+        type: operation.type,
+        playerIds: operation.playerIds,
+        parameters: operation.parameters,
+        results,
+        executedAt: new Date().toISOString(),
+        executedBy: userId
+      };
+
+      // Log bulk operation activity for each affected player
+      const successfulPlayerIds = operation.playerIds.slice(0, results.successful);
+      for (const playerId of successfulPlayerIds) {
+        await this.logPlayerActivity(
+          playerId, 
+          'bulk_updated', 
+          `Bulk ${operation.type} operation`,
+          { bulkOperationId: bulkOp.id }
+        );
+      }
+
+      return bulkOp;
+    } catch (error) {
+      throw new StorageError('supabase', 'executeBulkOperation', error as Error);
+    }
+  }
+
+  // Calculate roster analytics
+  async calculateRosterAnalytics(): Promise<RosterAnalytics> {
+    try {
+      const userId = await this.getCurrentUserId();
+      const players = await this.getEnhancedPlayers();
+      
+      const analytics: RosterAnalytics = {
+        id: crypto.randomUUID(),
+        userId,
+        totalPlayers: players.length,
+        activePlayers: players.filter(p => !p.tags?.some(t => t.name === 'Injured')).length,
+        goalkeepersCount: players.filter(p => p.isGoalie).length,
+        averageAge: this.calculateAverageAge(players),
+        positionDistribution: this.calculatePositionDistribution(players),
+        tagDistribution: this.calculateTagDistribution(players),
+        activitySummary: {},
+        lastGameParticipation: {},
+        performanceTrends: {},
+        calculatedAt: new Date().toISOString()
+      };
+
+      // Cache the analytics
+      await supabase
+        .from('roster_analytics')
+        .upsert({
+          user_id: userId,
+          total_players: analytics.totalPlayers,
+          active_players: analytics.activePlayers,
+          goalkeepers_count: analytics.goalkeepersCount,
+          average_age: analytics.averageAge,
+          position_distribution: analytics.positionDistribution,
+          tag_distribution: analytics.tagDistribution,
+          activity_summary: analytics.activitySummary,
+          last_game_participation: analytics.lastGameParticipation,
+          performance_trends: analytics.performanceTrends,
+          calculated_at: analytics.calculatedAt
+        }, {
+          onConflict: 'user_id'
+        });
+
+      return analytics;
+    } catch (error) {
+      throw new StorageError('supabase', 'calculateRosterAnalytics', error as Error);
+    }
+  }
+
+  // Private helper methods
+  private async enhancePlayerData(playerData: any): Promise<EnhancedPlayer> {
+    // Transform base player data
+    const basePlayer = this.transformPlayerFromSupabase(playerData);
+    
+    // Add tags
+    const tags = (playerData.player_tag_assignments || [])
+      .map((assignment: any) => this.transformTagFromSupabase(assignment.player_tags))
+      .filter(Boolean);
+
+    // Add recent activity
+    const recentActivity = (playerData.player_activities || [])
+      .slice(0, 10) // Last 10 activities
+      .map((activity: any) => this.transformActivityFromSupabase(activity));
+
+    // Calculate performance metrics (simplified for example)
+    const gamesPlayedCount = await this.calculateGamesPlayed(basePlayer.id);
+    const goalsPerGame = gamesPlayedCount > 0 ? (basePlayer.goals || 0) / gamesPlayedCount : 0;
+    const assistsPerGame = gamesPlayedCount > 0 ? (basePlayer.assists || 0) / gamesPlayedCount : 0;
+
+    const enhanced: EnhancedPlayer = {
+      ...basePlayer,
+      tags,
+      recentActivity,
+      gamesPlayedCount,
+      goalsPerGame: Math.round(goalsPerGame * 100) / 100,
+      assistsPerGame: Math.round(assistsPerGame * 100) / 100,
+      performanceTrend: 'stable', // Simplified
+      activityScore: this.calculateActivityScore(recentActivity)
+    };
+
+    return enhanced;
+  }
+
+  private async calculateGamesPlayed(playerId: string): Promise<number> {
+    // This would query games where the player participated
+    // Simplified implementation
+    return 0;
+  }
+
+  private calculateActivityScore(activities: PlayerActivity[]): number {
+    // Simple scoring based on recent activity
+    const recentActivities = activities.filter(a => 
+      new Date(a.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+    );
+    return recentActivities.length * 10;
+  }
+
+  private playerMatchesFilters(player: EnhancedPlayer, filters: PlayerSearchFilters): boolean {
+    if (filters.tags && filters.tags.length > 0) {
+      const playerTagIds = player.tags?.map(t => t.id) || [];
+      const hasRequiredTag = filters.tags.some(tagId => playerTagIds.includes(tagId));
+      if (!hasRequiredTag) return false;
+    }
+
+    if (filters.ageRange) {
+      // Would need to calculate age from birth date or age field
+      // Simplified implementation
+    }
+
+    return true;
+  }
+
+  private calculateAverageAge(players: EnhancedPlayer[]): number | undefined {
+    // Would need age data on players
+    return undefined;
+  }
+
+  private calculatePositionDistribution(players: EnhancedPlayer[]): Record<string, number> {
+    const distribution: Record<string, number> = {};
+    players.forEach(player => {
+      const position = player.position || 'unknown';
+      distribution[position] = (distribution[position] || 0) + 1;
+    });
+    return distribution;
+  }
+
+  private calculateTagDistribution(players: EnhancedPlayer[]): Record<string, number> {
+    const distribution: Record<string, number> = {};
+    players.forEach(player => {
+      player.tags?.forEach(tag => {
+        distribution[tag.name] = (distribution[tag.name] || 0) + 1;
+      });
+    });
+    return distribution;
+  }
+
+  // Log player activity
+  private async logPlayerActivity(
+    playerId: string, 
+    activityType: PlayerActivity['activityType'], 
+    description: string, 
+    metadata: Record<string, any> = {}
+  ): Promise<void> {
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      await supabase
+        .from('player_activities')
+        .insert({
+          user_id: userId,
+          player_id: playerId,
+          activity_type: activityType,
+          activity_description: description,
+          metadata
+        });
+    } catch (error) {
+      // Log activity failures shouldn't break the main operation
+      console.warn('Failed to log player activity:', error);
+    }
+  }
+
+  // Transform functions
+  private transformPlayerFromSupabase(data: any): any {
+    // This would transform the base player data
+    // Implementation depends on existing player structure
+    return {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      nickname: data.nickname,
+      position: data.position,
+      jerseyNumber: data.jersey_number,
+      isGoalie: data.is_goalie,
+      goals: data.goals || 0,
+      assists: data.assists || 0,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  }
+
+  private transformTagFromSupabase(data: any): PlayerTag {
+    return {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      color: data.color,
+      description: data.description,
+      createdAt: data.created_at
+    };
+  }
+
+  private transformTagAssignmentFromSupabase(data: any): PlayerTagAssignment {
+    return {
+      id: data.id,
+      userId: data.user_id,
+      playerId: data.player_id,
+      tagId: data.tag_id,
+      assignedAt: data.assigned_at,
+      assignedBy: data.assigned_by,
+      tag: data.player_tags ? this.transformTagFromSupabase(data.player_tags) : undefined
+    };
+  }
+
+  private transformActivityFromSupabase(data: any): PlayerActivity {
+    return {
+      id: data.id,
+      userId: data.user_id,
+      playerId: data.player_id,
+      activityType: data.activity_type,
+      activityDescription: data.activity_description,
+      changes: data.changes || {},
+      metadata: data.metadata || {},
+      createdAt: data.created_at
+    };
+  }
+}
+
+// Export singleton instance
+export const enhancedPlayerManager = new EnhancedPlayerManager();
 ```
 
-## Benefits of Supabase Migration
+**Immediate Verification:**
+```bash
+# Check TypeScript compilation
+npx tsc --noEmit
 
-### Enhanced Player Management
-- **Rich Player Profiles**: Extended player information with photos, medical info, and emergency contacts
-- **Advanced Search & Filtering**: Full-text search with position and status filtering
-- **Bulk Operations**: Import/export with CSV, JSON, and Excel support
-- **Player Analytics**: Cached statistics and performance tracking
-- **Activity Tracking**: Complete audit trail of player changes
+# Verify file created correctly
+ls -la src/utils/enhancedPlayerManager.ts
+wc -l src/utils/enhancedPlayerManager.ts  # Should be around 350+ lines
+```
 
-### Cloud Collaboration Features
-- **Multi-user Access**: Team managers can collaborate on roster management
-- **Real-time Sync**: Instant updates across all team devices
-- **Conflict Resolution**: Smart handling of concurrent player modifications
-- **Permission Management**: Role-based access control for different team members
+**Validation Checklist:**
+- [ ] File created at correct location
+- [ ] TypeScript compilation passes
+- [ ] All imports resolve correctly
+- [ ] Class structure follows existing patterns
+- [ ] Bulk operations implemented
+- [ ] Activity logging included
+- [ ] Analytics calculations present
 
-### Data Intelligence & Analytics
-- **Performance Insights**: Player statistics and performance trends
-- **Usage Analytics**: Track roster management patterns
-- **Predictive Features**: AI-powered player recommendations and insights
-- **Export Capabilities**: Advanced reporting and data analysis
+### [Continue with remaining steps following the same detailed format...]
 
-### Developer Experience
-- **Type Safety**: Comprehensive TypeScript support for all player operations
-- **Real-time Subscriptions**: Built-in live updates via WebSockets
-- **Optimistic Updates**: Immediate UI feedback with server reconciliation
-- **Error Handling**: Robust error handling with user-friendly messages
+## Error Recovery Procedures
 
-## Developer Checklist
+### Database Rollback
+If database steps fail:
+```sql
+-- Full rollback of all tables and functions
+DROP TRIGGER IF EXISTS create_default_player_tags_trigger ON auth.users;
+DROP FUNCTION IF EXISTS create_default_player_tags();
+DROP FUNCTION IF EXISTS recalculate_roster_analytics(UUID);
+DROP TABLE IF EXISTS roster_analytics;
+DROP TABLE IF EXISTS player_tag_assignments;
+DROP TABLE IF EXISTS player_tags;
+DROP TABLE IF EXISTS player_activities;
+```
 
-### Database Setup
-- [ ] Enhanced players table with rich profiles and cloud features
-- [ ] Player stats cache for performance optimization
-- [ ] Player activity tracking for audit trails
-- [ ] Bulk operations support with progress tracking
-- [ ] Database indexes and constraints for data integrity
+### Code Rollback  
+If code steps fail:
+```bash
+# See what changed
+git diff
 
-### API Integration
-- [ ] SupabaseProvider enhanced with advanced player operations
-- [ ] React Query hooks for complex player queries and mutations
-- [ ] Real-time subscriptions for live roster updates
-- [ ] Bulk import/export functionality with progress tracking
+# Rollback specific files
+git checkout HEAD -- src/utils/enhancedPlayerManager.ts
+git checkout HEAD -- src/types/index.ts
+git checkout HEAD -- src/components/RosterSettingsModal.tsx
 
-### UI Components
-- [ ] Cloud-enhanced roster settings modal with advanced features
-- [ ] Player search and filtering with real-time results
-- [ ] Bulk operations interface with progress indicators
-- [ ] Player details modal with rich profile information
+# Or full rollback
+git reset --hard HEAD
+```
 
-### UX Features
-- [ ] Multi-device roster synchronization working
-- [ ] Real-time collaboration for team roster management
-- [ ] Advanced search and filtering capabilities
-- [ ] Bulk operations with progress tracking and error handling
+### Common Issues & Solutions
 
-### Testing
-- [ ] Unit tests for enhanced player hooks and operations
-- [ ] Integration tests for real-time sync and collaboration
-- [ ] E2E tests for bulk operations and player management workflows
-- [ ] Migration testing with comprehensive data validation
+**"Complex query performance issues"**
+1. Ensure indexes are created on frequently queried columns
+2. Consider pagination for large datasets
+3. Use LIMIT and OFFSET for better performance
+4. Profile queries in Supabase dashboard
+
+**"Bulk operations timing out"**
+1. Implement batch processing (process in chunks of 10-20)
+2. Add progress tracking for long operations
+3. Use background processing for large bulk operations
+4. Provide user feedback during processing
+
+**"Tag assignment conflicts"**
+1. Handle unique constraint violations gracefully
+2. Check if tag already assigned before attempting assignment
+3. Provide clear error messages to users
+4. Implement optimistic locking for concurrent operations
+
+## Testing Validation
+
+### Manual Testing Checklist
+After completing all steps:
+- [ ] **Enhanced roster loads** with tags and analytics
+- [ ] **Search and filtering** works across all criteria
+- [ ] **Bulk operations** complete successfully without errors
+- [ ] **Tag management** allows creating, assigning, and removing tags
+- [ ] **Activity tracking** records all player changes
+- [ ] **Analytics calculations** provide meaningful insights
+- [ ] **Performance** remains acceptable with large rosters
+
+### Automated Testing
+```bash
+# Run existing tests to ensure no regressions
+npm test
+
+# Run TypeScript checking
+npx tsc --noEmit
+
+# Run linting if available
+npm run lint
+```
+
+## Definition of Done
+This feature is complete when:
+- [ ] All progress tracking checkboxes are checked
+- [ ] All validation checklists pass
+- [ ] Enhanced roster management UI works smoothly
+- [ ] Bulk operations handle errors gracefully
+- [ ] Activity tracking provides useful history
+- [ ] Analytics give meaningful insights
+- [ ] Search and filtering perform well
+- [ ] Import/export functionality works correctly
+- [ ] No existing functionality is broken
+
+## Time Tracking Template
+```
+## Master Roster Management Implementation Log
+**Start Time**: [FILL IN]
+**Estimated Total**: 6.2 hours
+**Actual Total**: [UPDATE AS YOU GO]
+
+### Phase 1: Database Enhancements (Est: 30min)
+- Step 1.1: [ACTUAL TIME] vs 8min estimated
+- Step 1.2: [ACTUAL TIME] vs 7min estimated
+
+### Issues Encountered:
+- [LOG ANY PROBLEMS AND SOLUTIONS]
+
+### Notes:
+- [ANY OBSERVATIONS OR MODIFICATIONS TO THE PLAN]
+```
+
+This master roster management system will provide coaches with powerful tools to organize, analyze, and manage their player rosters efficiently with comprehensive tracking and insights.

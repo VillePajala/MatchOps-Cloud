@@ -1,933 +1,877 @@
-# "How It Works" Help Content - Supabase Version
+# Enhanced Help System - AI-Ready Implementation Plan
 
 ## Overview
-Comprehensive cloud-enhanced help system providing contextual, workflow-based guidance accessible from multiple entry points throughout the application. Enhanced with dynamic content management, user progress tracking, multi-language support, and real-time content updates from Supabase. The system includes personalized help recommendations and collaborative content contributions.
+Transform the existing InstructionsModal into a comprehensive, cloud-enhanced help system with dynamic content management, user progress tracking, context-aware guidance, and multi-device synchronization.
 
-## Data Model (Supabase Tables)
+## Prerequisites Verification
+**BEFORE STARTING**: Verify all prerequisites are met
 
-### Dynamic Help Content Management
+### Pre-Implementation Checks
+- [ ] **Environment**: `npm run dev` starts without errors
+- [ ] **Database Access**: Can access Supabase dashboard and run SQL queries
+- [ ] **Instructions Modal**: Existing InstructionsModal component works
+- [ ] **i18n System**: Current translation system in place
+- [ ] **Git State**: Working directory clean (`git status` shows no uncommitted changes)
+
+### Understanding Current Architecture
+**CRITICAL**: Read these files before proceeding:
+1. `src/components/InstructionsModal.tsx` - Current help/instructions modal
+2. `src/i18n/` - Current internationalization setup
+3. `src/context/AuthContext.tsx` - User authentication system
+4. `src/hooks/useUserPreferences.ts` - If exists from adaptive start screen
+
+**Verification Commands:**
+```bash
+# Check these files exist
+ls -la src/components/InstructionsModal.tsx src/context/AuthContext.tsx
+
+# Find current i18n setup
+find src -name "*i18n*" -o -name "*translation*" | head -5
+
+# Check current help/instructions content
+grep -r "instruction\|help\|guide" src/components/ | head -3
+```
+
+## Progress Tracking
+
+### Phase 1: Database Foundation (20 min total)
+- [ ] **Step 1.1**: Create help_content table (7 min)
+- [ ] **Step 1.2**: Create user_help_progress table (5 min)
+- [ ] **Step 1.3**: Create help_categories table (5 min)
+- [ ] **Step 1.4**: Seed default help content (3 min)
+
+### Phase 2: Content Management Types (15 min total)
+- [ ] **Step 2.1**: Add HelpContent interface (4 min)
+- [ ] **Step 2.2**: Add HelpCategory interface (3 min)
+- [ ] **Step 2.3**: Add UserHelpProgress interface (4 min)
+- [ ] **Step 2.4**: Verify TypeScript compilation (4 min)
+
+### Phase 3: Help Content Manager (35 min total)
+- [ ] **Step 3.1**: Create helpContent utility structure (10 min)
+- [ ] **Step 3.2**: Implement content CRUD operations (15 min)
+- [ ] **Step 3.3**: Add progress tracking functions (10 min)
+
+### Phase 4: Enhanced Help Hooks (30 min total)
+- [ ] **Step 4.1**: Create useHelpContent hook (15 min)
+- [ ] **Step 4.2**: Create useHelpProgress hook (15 min)
+
+### Phase 5: Dynamic Content System (40 min total)
+- [ ] **Step 5.1**: Create HelpContentRenderer component (15 min)
+- [ ] **Step 5.2**: Create ProgressTracker component (10 min)
+- [ ] **Step 5.3**: Create ContextAwareHelper component (15 min)
+
+### Phase 6: Enhanced Instructions Modal (45 min total)
+- [ ] **Step 6.1**: Backup existing InstructionsModal (5 min)
+- [ ] **Step 6.2**: Enhance modal with dynamic content (20 min)
+- [ ] **Step 6.3**: Add progress tracking integration (15 min)
+- [ ] **Step 6.4**: Test enhanced modal (5 min)
+
+### Phase 7: Context-Aware Help (25 min total)
+- [ ] **Step 7.1**: Add contextual help triggers (15 min)
+- [ ] **Step 7.2**: Implement smart help suggestions (10 min)
+
+### Phase 8: Testing & Validation (20 min total)
+- [ ] **Step 8.1**: Write unit tests for help system (12 min)
+- [ ] **Step 8.2**: Manual integration testing (8 min)
+
+## Detailed Implementation Steps
+
+### Step 1.1: Create help_content Table
+**Estimated Time**: 7 minutes
+**Files Modified**: Supabase Database (via SQL Editor)
+
+**Pre-Checks:**
+- [ ] Can access Supabase dashboard
+- [ ] Can run SQL queries in SQL editor
+- [ ] Current database has auth.users table
+
+**Implementation:**
 ```sql
--- Help content with version control and multi-language support
+-- Step 1.1: Create help_content table
 CREATE TABLE help_content (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  content_key TEXT NOT NULL,
-  language TEXT NOT NULL DEFAULT 'en',
+  category_id UUID, -- Will reference help_categories
   title TEXT NOT NULL,
-  subtitle TEXT,
-  section_order INTEGER NOT NULL DEFAULT 0,
-  content JSONB NOT NULL,
-  metadata JSONB DEFAULT '{}',
-  version INTEGER DEFAULT 1,
+  content TEXT NOT NULL,
+  content_type TEXT DEFAULT 'markdown' CHECK (content_type IN ('markdown', 'html', 'text')),
+  language_code TEXT DEFAULT 'en',
+  ordering INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
-  created_by UUID REFERENCES auth.users(id),
+  target_context TEXT, -- e.g., 'game_setup', 'roster_management', 'general'
+  prerequisites TEXT[], -- Array of required knowledge areas
+  difficulty_level TEXT DEFAULT 'beginner' CHECK (difficulty_level IN ('beginner', 'intermediate', 'advanced')),
+  estimated_read_time INTEGER, -- in seconds
+  tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
-  UNIQUE(content_key, language, version)
+  -- Ensure unique titles per category and language
+  UNIQUE(category_id, title, language_code)
 );
 
--- User help progress and preferences
+-- Enable RLS (no user isolation needed for help content - it's global)
+ALTER TABLE help_content ENABLE ROW LEVEL SECURITY;
+
+-- Allow everyone to read help content
+CREATE POLICY "Help content is readable by all authenticated users" ON help_content
+  FOR SELECT USING (auth.role() = 'authenticated' AND is_active = true);
+
+-- Add indexes for performance
+CREATE INDEX idx_help_content_category ON help_content(category_id);
+CREATE INDEX idx_help_content_context ON help_content(target_context);
+CREATE INDEX idx_help_content_language ON help_content(language_code);
+CREATE INDEX idx_help_content_active ON help_content(is_active, ordering);
+```
+
+**Immediate Verification:**
+```sql
+-- Verify table structure
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_name = 'help_content' 
+ORDER BY ordinal_position;
+
+-- Should show 14 columns
+SELECT COUNT(*) as column_count 
+FROM information_schema.columns 
+WHERE table_name = 'help_content';
+```
+
+**Validation Checklist:**
+- [ ] SQL executed without errors
+- [ ] Table appears in Supabase Dashboard → Database → Tables
+- [ ] Table has 14 columns as expected
+- [ ] RLS policy created for public read access
+- [ ] Four indexes created successfully
+- [ ] CHECK constraints working for content_type and difficulty_level
+
+### Step 1.2: Create user_help_progress Table
+**Estimated Time**: 5 minutes
+**Files Modified**: Supabase Database
+
+**Pre-Checks:**
+- [ ] Step 1.1 completed successfully
+- [ ] Still in Supabase SQL Editor
+
+**Implementation:**
+```sql
+-- Step 1.2: Create user help progress tracking
 CREATE TABLE user_help_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  content_key TEXT NOT NULL,
-  sections_viewed JSONB DEFAULT '[]',
-  last_viewed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  completed BOOLEAN DEFAULT FALSE,
-  helpful_rating INTEGER CHECK (helpful_rating >= 1 AND helpful_rating <= 5),
-  feedback TEXT,
+  help_content_id UUID NOT NULL REFERENCES help_content(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'bookmarked')),
+  progress_percentage INTEGER DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100),
+  time_spent_seconds INTEGER DEFAULT 0,
+  last_accessed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE,
+  notes TEXT, -- User's personal notes
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5), -- User's rating of helpfulness
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
-  UNIQUE(user_id, content_key)
-);
-
--- Help content analytics and recommendations
-CREATE TABLE help_analytics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  content_key TEXT NOT NULL,
-  section_key TEXT,
-  action TEXT NOT NULL, -- 'viewed', 'searched', 'helpful', 'not_helpful'
-  context JSONB DEFAULT '{}',
-  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  session_id TEXT
-);
-
--- User-contributed help content (community features)
-CREATE TABLE help_contributions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  content_key TEXT NOT NULL,
-  contribution_type TEXT NOT NULL CHECK (contribution_type IN ('suggestion', 'correction', 'addition', 'translation')),
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  moderator_notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  UNIQUE(user_id, help_content_id)
 );
 
 -- Enable RLS
-ALTER TABLE help_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_help_progress ENABLE ROW LEVEL SECURITY;
-ALTER TABLE help_analytics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE help_contributions ENABLE ROW LEVEL SECURITY;
 
--- Policies
-CREATE POLICY "Anyone can read active help content" ON help_content
-  FOR SELECT USING (is_active = TRUE);
-
+-- Users can only manage their own progress
 CREATE POLICY "Users can manage their own help progress" ON user_help_progress
   FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can manage their own help analytics" ON help_analytics
-  FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage their own contributions" ON help_contributions
-  FOR ALL USING (auth.uid() = user_id);
-
--- Indexes for performance
-CREATE INDEX idx_help_content_key_lang ON help_content(content_key, language, version);
-CREATE INDEX idx_help_content_active ON help_content(content_key, is_active) WHERE is_active = TRUE;
+-- Add indexes
 CREATE INDEX idx_user_help_progress_user ON user_help_progress(user_id);
-CREATE INDEX idx_help_analytics_user_content ON help_analytics(user_id, content_key);
-CREATE INDEX idx_help_contributions_status ON help_contributions(status);
+CREATE INDEX idx_user_help_progress_content ON user_help_progress(help_content_id);
+CREATE INDEX idx_user_help_progress_status ON user_help_progress(status);
+CREATE INDEX idx_user_help_progress_accessed ON user_help_progress(last_accessed_at DESC);
 ```
 
-### Enhanced Help Content Structure
-**File**: `src/types/index.ts`
+**Immediate Verification:**
+```sql
+-- Verify table structure
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_name = 'user_help_progress' 
+ORDER BY ordinal_position;
+
+-- Test constraints
+INSERT INTO user_help_progress (user_id, help_content_id, progress_percentage) 
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', 150);
+-- Should fail due to progress_percentage constraint
+```
+
+**Validation Checklist:**
+- [ ] SQL executed without errors
+- [ ] Table has 12 columns: id, user_id, help_content_id, status, progress_percentage, time_spent_seconds, last_accessed_at, completed_at, notes, rating, created_at, updated_at
+- [ ] RLS policy created
+- [ ] CHECK constraints prevent invalid progress percentages and ratings
+- [ ] Four indexes created
+
+### Step 1.3: Create help_categories Table
+**Estimated Time**: 5 minutes
+**Files Modified**: Supabase Database
+
+**Implementation:**
+```sql
+-- Step 1.3: Create help categories for organization
+CREATE TABLE help_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT, -- Icon identifier like 'play', 'settings', etc.
+  color TEXT, -- Hex color for UI
+  ordering INTEGER DEFAULT 0,
+  parent_id UUID REFERENCES help_categories(id), -- For nested categories
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  UNIQUE(name)
+);
+
+-- Enable RLS
+ALTER TABLE help_categories ENABLE ROW LEVEL SECURITY;
+
+-- Allow everyone to read categories
+CREATE POLICY "Help categories are readable by all authenticated users" ON help_categories
+  FOR SELECT USING (auth.role() = 'authenticated' AND is_active = true);
+
+-- Add foreign key constraint to help_content
+ALTER TABLE help_content 
+ADD CONSTRAINT fk_help_content_category 
+FOREIGN KEY (category_id) REFERENCES help_categories(id);
+
+-- Add indexes
+CREATE INDEX idx_help_categories_parent ON help_categories(parent_id);
+CREATE INDEX idx_help_categories_ordering ON help_categories(ordering);
+```
+
+**Immediate Verification:**
+```sql
+-- Verify table structure and relationships
+SELECT table_name, column_name, data_type
+FROM information_schema.columns 
+WHERE table_name = 'help_categories' 
+ORDER BY ordinal_position;
+
+-- Verify foreign key was added
+SELECT constraint_name, table_name, column_name, foreign_table_name, foreign_column_name
+FROM information_schema.key_column_usage k
+JOIN information_schema.referential_constraints r ON k.constraint_name = r.constraint_name
+WHERE k.table_name = 'help_content' AND k.column_name = 'category_id';
+```
+
+**Validation Checklist:**
+- [ ] Table created with 9 columns
+- [ ] Foreign key constraint added to help_content table
+- [ ] RLS policy allows public reading
+- [ ] Two indexes created
+- [ ] Self-referencing foreign key (parent_id) works
+
+### Step 1.4: Seed Default Help Content
+**Estimated Time**: 3 minutes
+**Files Modified**: Supabase Database
+
+**Implementation:**
+```sql
+-- Step 1.4: Insert default categories and content
+-- Insert categories first
+INSERT INTO help_categories (id, name, description, icon, color, ordering) VALUES 
+('11111111-1111-1111-1111-111111111111', 'Getting Started', 'Basic tutorials for new users', 'play-circle', '#22C55E', 1),
+('22222222-2222-2222-2222-222222222222', 'Game Management', 'Creating and managing games', 'soccer', '#3B82F6', 2),
+('33333333-3333-3333-3333-333333333333', 'Player Management', 'Managing rosters and player stats', 'users', '#8B5CF6', 3),
+('44444444-4444-4444-4444-444444444444', 'Advanced Features', 'Advanced functionality and tips', 'cog', '#F59E0B', 4),
+('55555555-5555-5555-5555-555555555555', 'Troubleshooting', 'Common issues and solutions', 'question-mark-circle', '#EF4444', 5);
+
+-- Insert basic help content
+INSERT INTO help_content (category_id, title, content, target_context, difficulty_level, estimated_read_time, tags) VALUES 
+('11111111-1111-1111-1111-111111111111', 'Welcome to MatchOps', 
+'# Welcome to MatchOps
+
+MatchOps is your complete soccer game management solution. This guide will help you get started quickly.
+
+## First Steps
+1. Set up your player roster
+2. Create your first game
+3. Start tracking player performance
+
+## Key Features
+- **Player Management**: Add players, track stats, manage rosters
+- **Game Tracking**: Real-time game events and statistics
+- **Performance Analytics**: Detailed insights into player and team performance
+
+Ready to get started? Let''s begin with setting up your roster!', 
+'general', 'beginner', 120, ARRAY['welcome', 'getting-started']),
+
+('22222222-2222-2222-2222-222222222222', 'Creating Your First Game', 
+'# Creating Your First Game
+
+Follow these steps to create and start your first game:
+
+## Prerequisites
+- At least one player in your roster
+- Basic game settings configured
+
+## Steps
+1. Click "New Game" from the home screen
+2. Select your formation
+3. Assign players to positions
+4. Configure game settings (time, rules, etc.)
+5. Start the game!
+
+## During the Game
+- Tap players to record events (goals, assists, cards)
+- Use the timer controls to manage game time
+- Make substitutions as needed
+
+## After the Game
+- Review statistics and player performance
+- Save the game for future reference', 
+'game_setup', 'beginner', 180, ARRAY['game', 'setup', 'tutorial']);
+```
+
+**Immediate Verification:**
+```sql
+-- Verify categories were inserted
+SELECT name, description FROM help_categories ORDER BY ordering;
+
+-- Verify help content was inserted
+SELECT title, category_id, difficulty_level FROM help_content;
+
+-- Should show 5 categories and 2 content items
+SELECT 
+  (SELECT COUNT(*) FROM help_categories) as categories_count,
+  (SELECT COUNT(*) FROM help_content) as content_count;
+```
+
+**Validation Checklist:**
+- [ ] 5 categories inserted successfully
+- [ ] 2 help content items inserted
+- [ ] Foreign key relationships working
+- [ ] Content includes markdown formatting
+- [ ] Tags array populated correctly
+
+### Step 2.1: Add HelpContent Interface
+**Estimated Time**: 4 minutes
+**Files Modified**: `src/types/index.ts`
+
+**Pre-Checks:**
+- [ ] File `src/types/index.ts` exists and is writable
+- [ ] Phase 1 database changes completed successfully
+- [ ] Git status clean
+
+**Implementation:**
+Add these interfaces at the END of `src/types/index.ts`:
+
 ```typescript
+// Enhanced Help System Types - Added [CURRENT_DATE]
+export interface HelpCategory {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string; // Hex color like '#22C55E'
+  ordering: number;
+  parentId?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface HelpContent {
   id: string;
-  contentKey: string;
-  language: string;
+  categoryId?: string;
   title: string;
-  subtitle?: string;
-  sectionOrder: number;
-  content: {
-    sections: HelpSection[];
-    resources: HelpResource[];
-    relatedContent: string[];
-    searchTags: string[];
-  };
-  metadata: {
-    difficulty?: 'beginner' | 'intermediate' | 'advanced';
-    estimatedReadTime?: number;
-    lastUpdated?: string;
-    contributors?: string[];
-  };
-  version: number;
+  content: string;
+  contentType: 'markdown' | 'html' | 'text';
+  languageCode: string;
+  ordering: number;
   isActive: boolean;
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface HelpSection {
-  id: string;
-  title: string;
-  content: string;
-  iconName?: string;
-  iconColor?: string;
-  subsections?: HelpSubsection[];
-  interactive?: boolean;
-  videoUrl?: string;
-}
-
-export interface HelpSubsection {
-  title: string;
-  content: string;
-  code?: string;
-  tips?: string[];
-}
-
-export interface HelpResource {
-  type: 'link' | 'video' | 'document' | 'interactive';
-  title: string;
-  url: string;
-  description?: string;
-  thumbnail?: string;
+  targetContext?: string; // 'game_setup', 'roster_management', etc.
+  prerequisites: string[];
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced';
+  estimatedReadTime?: number; // in seconds
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  // Populated from joins
+  category?: HelpCategory;
 }
 
 export interface UserHelpProgress {
   id: string;
   userId: string;
-  contentKey: string;
-  sectionsViewed: string[];
-  lastViewedAt: string;
-  completed: boolean;
-  helpfulRating?: number;
-  feedback?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  helpContentId: string;
+  status: 'not_started' | 'in_progress' | 'completed' | 'bookmarked';
+  progressPercentage: number; // 0-100
+  timeSpentSeconds: number;
+  lastAccessedAt: string;
+  completedAt?: string;
+  notes?: string;
+  rating?: number; // 1-5 stars
+  createdAt: string;
+  updatedAt: string;
+  // Populated from joins
+  helpContent?: HelpContent;
+}
+
+export interface HelpContextInfo {
+  context: string; // Current page/component context
+  suggestedContent: HelpContent[];
+  userProgress: Record<string, UserHelpProgress>;
+}
+
+export interface HelpSearchResult {
+  content: HelpContent;
+  relevanceScore: number;
+  matchedTerms: string[];
 }
 ```
 
-## Enhanced Data Operations
+**Immediate Verification:**
+```bash
+# Check TypeScript compilation
+npx tsc --noEmit
+# Should complete without errors
 
-### Dynamic Help Content Loading
-**File**: `src/hooks/useHelpContentQueries.ts`
-```typescript
-export const useHelpContent = (contentKey: string) => {
-  const { i18n } = useTranslation();
-  
-  return useQuery({
-    queryKey: queryKeys.helpContent(contentKey, i18n.language),
-    queryFn: async () => {
-      // Try to get content in user's language first
-      let { data, error } = await supabase
-        .from('help_content')
-        .select('*')
-        .eq('content_key', contentKey)
-        .eq('language', i18n.language)
-        .eq('is_active', true)
-        .order('version', { ascending: false })
-        .limit(1)
-        .single();
-      
-      // Fallback to English if not available in user's language
-      if (error && error.code === 'PGRST116') {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('help_content')
-          .select('*')
-          .eq('content_key', contentKey)
-          .eq('language', 'en')
-          .eq('is_active', true)
-          .order('version', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (fallbackError) throw new StorageError('supabase', 'getHelpContent', fallbackError);
-        data = fallbackData;
-      } else if (error) {
-        throw new StorageError('supabase', 'getHelpContent', error);
-      }
-      
-      return transformHelpContentFromSupabase(data);
-    },
-    staleTime: 30 * 60 * 1000, // 30 minutes (content doesn't change frequently)
-  });
-};
-
-export const useAllHelpContent = () => {
-  const { i18n } = useTranslation();
-  
-  return useQuery({
-    queryKey: queryKeys.allHelpContent(i18n.language),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('help_content')
-        .select('id, content_key, language, title, subtitle, section_order, metadata, updated_at')
-        .eq('language', i18n.language)
-        .eq('is_active', true)
-        .order('section_order', { ascending: true });
-      
-      if (error) throw new StorageError('supabase', 'getAllHelpContent', error);
-      return data.map(transformHelpContentFromSupabase);
-    },
-    staleTime: 15 * 60 * 1000, // 15 minutes
-  });
-};
+# Verify interfaces were added
+tail -30 src/types/index.ts | grep -E "(interface|export)"
 ```
 
-### User Help Progress Tracking
-**File**: `src/hooks/useHelpProgressQueries.ts`
+**Validation Checklist:**
+- [ ] TypeScript compilation passes
+- [ ] All interfaces properly exported
+- [ ] No naming conflicts with existing types
+- [ ] Git diff shows only expected additions
+
+### Step 3.1: Create Help Content Utility Structure
+**Estimated Time**: 10 minutes
+**Files Created**: `src/utils/helpContent.ts`
+
+**Pre-Checks:**
+- [ ] Directory `src/utils/` exists
+- [ ] Step 2.1 completed (types available)
+- [ ] Can import from existing utilities
+
+**Implementation:**
+Create the new file:
+
 ```typescript
-export const useHelpProgress = (contentKey?: string) => {
-  const { data: { user } } = useAuth();
-  
-  return useQuery({
-    queryKey: queryKeys.helpProgress(user?.id, contentKey),
-    queryFn: async () => {
-      if (!user) return null;
-      
+// src/utils/helpContent.ts
+import { supabase } from '../lib/supabase';
+import type { HelpContent, HelpCategory, UserHelpProgress, HelpContextInfo, HelpSearchResult } from '../types';
+import { StorageError, NetworkError, AuthenticationError } from '../lib/storage/types';
+
+export class HelpContentManager {
+  private async getCurrentUserId(): Promise<string | null> {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    return user?.id || null;
+  }
+
+  // Get all help categories
+  async getHelpCategories(): Promise<HelpCategory[]> {
+    try {
+      const { data, error } = await supabase
+        .from('help_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('ordering');
+
+      if (error) throw error;
+      return (data || []).map(this.transformCategoryFromSupabase);
+    } catch (error) {
+      throw new StorageError('supabase', 'getHelpCategories', error as Error);
+    }
+  }
+
+  // Get help content by category
+  async getHelpContentByCategory(categoryId?: string, language = 'en'): Promise<HelpContent[]> {
+    try {
       let query = supabase
-        .from('user_help_progress')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (contentKey) {
-        query = query.eq('content_key', contentKey).single();
-      }
-      
-      const { data, error } = await query;
-      
-      if (error && error.code !== 'PGRST116') {
-        throw new StorageError('supabase', 'getHelpProgress', error);
-      }
-      
-      if (contentKey) {
-        return data ? transformHelpProgressFromSupabase(data) : null;
-      } else {
-        return data ? data.map(transformHelpProgressFromSupabase) : [];
-      }
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
+        .from('help_content')
+        .select(`
+          *,
+          category:help_categories(*)
+        `)
+        .eq('is_active', true)
+        .eq('language_code', language)
+        .order('ordering');
 
-export const useUpdateHelpProgress = () => {
-  const queryClient = useQueryClient();
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (progressData: {
-      contentKey: string;
-      sectionKey?: string;
-      completed?: boolean;
-      rating?: number;
-      feedback?: string;
-    }) => {
-      if (!user) throw new AuthenticationError('No authenticated user');
-      
-      // Get existing progress
-      const { data: existing } = await supabase
-        .from('user_help_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('content_key', progressData.contentKey)
-        .single();
-      
-      const updatedSections = existing?.sections_viewed || [];
-      if (progressData.sectionKey && !updatedSections.includes(progressData.sectionKey)) {
-        updatedSections.push(progressData.sectionKey);
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
       }
+
+      const { data, error } = await query;
+      if (error) throw error;
       
-      const progressUpdate = {
-        user_id: user.id,
-        content_key: progressData.contentKey,
-        sections_viewed: updatedSections,
-        last_viewed_at: new Date().toISOString(),
-        completed: progressData.completed || existing?.completed || false,
-        helpful_rating: progressData.rating || existing?.helpful_rating,
-        feedback: progressData.feedback || existing?.feedback
-      };
+      return (data || []).map(this.transformContentFromSupabase);
+    } catch (error) {
+      throw new StorageError('supabase', 'getHelpContentByCategory', error as Error);
+    }
+  }
+
+  // Get help content by context
+  async getHelpContentByContext(context: string, language = 'en'): Promise<HelpContent[]> {
+    try {
+      const { data, error } = await supabase
+        .from('help_content')
+        .select(`
+          *,
+          category:help_categories(*)
+        `)
+        .eq('is_active', true)
+        .eq('language_code', language)
+        .eq('target_context', context)
+        .order('difficulty_level', { ascending: true })
+        .order('ordering');
+
+      if (error) throw error;
+      return (data || []).map(this.transformContentFromSupabase);
+    } catch (error) {
+      throw new StorageError('supabase', 'getHelpContentByContext', error as Error);
+    }
+  }
+
+  // Search help content
+  async searchHelpContent(query: string, language = 'en'): Promise<HelpSearchResult[]> {
+    try {
+      const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
       
       const { data, error } = await supabase
+        .from('help_content')
+        .select(`
+          *,
+          category:help_categories(*)
+        `)
+        .eq('is_active', true)
+        .eq('language_code', language)
+        .or(`title.ilike.%${query}%,content.ilike.%${query}%,tags.cs.{${query}}`);
+
+      if (error) throw error;
+
+      const results = (data || []).map(content => {
+        const transformedContent = this.transformContentFromSupabase(content);
+        const relevanceScore = this.calculateRelevanceScore(transformedContent, query, searchTerms);
+        const matchedTerms = this.findMatchedTerms(transformedContent, searchTerms);
+
+        return {
+          content: transformedContent,
+          relevanceScore,
+          matchedTerms
+        };
+      });
+
+      // Sort by relevance score (descending)
+      return results.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    } catch (error) {
+      throw new StorageError('supabase', 'searchHelpContent', error as Error);
+    }
+  }
+
+  // Get user's help progress for specific content
+  async getUserHelpProgress(contentId: string): Promise<UserHelpProgress | null> {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) return null;
+
+      const { data, error } = await supabase
         .from('user_help_progress')
-        .upsert([progressUpdate], {
-          onConflict: 'user_id,content_key'
-        })
-        .select()
+        .select(`
+          *,
+          help_content:help_content(*)
+        `)
+        .eq('user_id', userId)
+        .eq('help_content_id', contentId)
         .single();
-      
-      if (error) throw new StorageError('supabase', 'updateHelpProgress', error);
-      return transformHelpProgressFromSupabase(data);
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(queryKeys.helpProgress(user?.id));
-      queryClient.invalidateQueries(queryKeys.helpProgress(user?.id, data.contentKey));
-    },
-  });
-};
-```
 
-### Help Analytics Tracking
-**File**: `src/hooks/useHelpAnalyticsQueries.ts`
-```typescript
-export const useHelpAnalytics = () => {
-  const { data: { user } } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (analyticsData: {
-      contentKey: string;
-      sectionKey?: string;
-      action: 'viewed' | 'searched' | 'helpful' | 'not_helpful' | 'completed';
-      context?: any;
-      sessionId?: string;
-    }) => {
-      if (!user) return; // Silent fail for analytics
-      
-      const { error } = await supabase
-        .from('help_analytics')
-        .insert([{
-          user_id: user.id,
-          content_key: analyticsData.contentKey,
-          section_key: analyticsData.sectionKey,
-          action: analyticsData.action,
-          context: analyticsData.context || {},
-          session_id: analyticsData.sessionId || getSessionId()
-        }]);
-      
-      if (error) {
-        // Log error but don't throw - analytics shouldn't break UX
-        logger.warn('Failed to track help analytics:', error);
-      }
-    },
-  });
-};
-```
+      if (error && error.code !== 'PGRST116') throw error;
+      return data ? this.transformProgressFromSupabase(data) : null;
+    } catch (error) {
+      throw new StorageError('supabase', 'getUserHelpProgress', error as Error);
+    }
+  }
 
-## Real-time Content Updates
+  // Update user's help progress
+  async updateUserHelpProgress(
+    contentId: string, 
+    progress: Partial<Omit<UserHelpProgress, 'id' | 'userId' | 'helpContentId' | 'createdAt'>>
+  ): Promise<UserHelpProgress> {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new AuthenticationError('supabase', 'updateUserHelpProgress', new Error('Not authenticated'));
 
-### Dynamic Help Content Sync
-**File**: `src/hooks/useHelpContentRealtimeSync.ts`
-```typescript
-export const useHelpContentRealtimeSync = () => {
-  const queryClient = useQueryClient();
-  const { i18n } = useTranslation();
-  
-  useEffect(() => {
-    const channel = supabase
-      .channel('help_content_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'help_content',
-          filter: `language=eq.${i18n.language}`,
-        },
-        (payload) => {
-          // Update help content cache when content is updated
-          queryClient.invalidateQueries(queryKeys.allHelpContent(i18n.language));
-          
-          if (payload.new?.content_key) {
-            queryClient.invalidateQueries(
-              queryKeys.helpContent(payload.new.content_key, i18n.language)
-            );
-          }
-          
-          // Show notification for content updates
-          if (payload.eventType === 'UPDATE' && payload.new?.is_active) {
-            toast.info('Help content has been updated', {
-              id: 'help-content-updated',
-              duration: 3000
-            });
-          }
+      const { data, error } = await supabase
+        .from('user_help_progress')
+        .upsert({
+          user_id: userId,
+          help_content_id: contentId,
+          status: progress.status || 'not_started',
+          progress_percentage: progress.progressPercentage || 0,
+          time_spent_seconds: progress.timeSpentSeconds || 0,
+          last_accessed_at: new Date().toISOString(),
+          completed_at: progress.completedAt || null,
+          notes: progress.notes || null,
+          rating: progress.rating || null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,help_content_id'
+        })
+        .select(`
+          *,
+          help_content:help_content(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      return this.transformProgressFromSupabase(data);
+    } catch (error) {
+      throw new StorageError('supabase', 'updateUserHelpProgress', error as Error);
+    }
+  }
+
+  // Get contextual help info for current page
+  async getContextualHelp(context: string): Promise<HelpContextInfo> {
+    try {
+      const userId = await this.getCurrentUserId();
+      const suggestedContent = await this.getHelpContentByContext(context);
+      
+      let userProgress: Record<string, UserHelpProgress> = {};
+      
+      if (userId && suggestedContent.length > 0) {
+        const contentIds = suggestedContent.map(c => c.id);
+        const { data: progressData } = await supabase
+          .from('user_help_progress')
+          .select('*')
+          .eq('user_id', userId)
+          .in('help_content_id', contentIds);
+
+        if (progressData) {
+          userProgress = progressData.reduce((acc, progress) => {
+            acc[progress.help_content_id] = this.transformProgressFromSupabase(progress);
+            return acc;
+          }, {} as Record<string, UserHelpProgress>);
         }
-      )
-      .subscribe();
+      }
 
-    return () => {
-      supabase.removeChannel(channel);
+      return {
+        context,
+        suggestedContent,
+        userProgress
+      };
+    } catch (error) {
+      throw new StorageError('supabase', 'getContextualHelp', error as Error);
+    }
+  }
+
+  // Private helper methods
+  private calculateRelevanceScore(content: HelpContent, query: string, terms: string[]): number {
+    const queryLower = query.toLowerCase();
+    const titleLower = content.title.toLowerCase();
+    const contentLower = content.content.toLowerCase();
+    
+    let score = 0;
+    
+    // Title match gets highest score
+    if (titleLower.includes(queryLower)) score += 100;
+    
+    // Exact phrase in content
+    if (contentLower.includes(queryLower)) score += 50;
+    
+    // Individual term matches
+    terms.forEach(term => {
+      if (titleLower.includes(term)) score += 20;
+      if (contentLower.includes(term)) score += 10;
+      if (content.tags.some(tag => tag.toLowerCase().includes(term))) score += 15;
+    });
+    
+    // Difficulty level preference (beginners first)
+    if (content.difficultyLevel === 'beginner') score += 5;
+    
+    return score;
+  }
+
+  private findMatchedTerms(content: HelpContent, terms: string[]): string[] {
+    const titleLower = content.title.toLowerCase();
+    const contentLower = content.content.toLowerCase();
+    
+    return terms.filter(term => 
+      titleLower.includes(term) || 
+      contentLower.includes(term) ||
+      content.tags.some(tag => tag.toLowerCase().includes(term))
+    );
+  }
+
+  private transformCategoryFromSupabase(data: any): HelpCategory {
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      icon: data.icon,
+      color: data.color,
+      ordering: data.ordering,
+      parentId: data.parent_id,
+      isActive: data.is_active,
+      createdAt: data.created_at
     };
-  }, [queryClient, i18n.language]);
-};
-```
-
-## Enhanced UI Implementation
-
-### Cloud-enhanced Instructions Modal
-**File**: `src/components/CloudInstructionsModal.tsx`
-```typescript
-export const CloudInstructionsModal: React.FC<InstructionsModalProps> = ({ 
-  isOpen, 
-  onClose,
-  initialContentKey = 'main-instructions'
-}) => {
-  const { t } = useTranslation();
-  const { data: helpContent, isLoading } = useHelpContent(initialContentKey);
-  const { data: helpProgress } = useHelpProgress(initialContentKey);
-  const updateProgress = useUpdateHelpProgress();
-  const trackAnalytics = useHelpAnalytics();
-  
-  // Real-time content sync
-  useHelpContentRealtimeSync();
-  
-  const [currentSection, setCurrentSection] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showFeedback, setShowFeedback] = useState(false);
-  
-  // Track modal opening
-  useEffect(() => {
-    if (isOpen && helpContent) {
-      trackAnalytics.mutate({
-        contentKey: helpContent.contentKey,
-        action: 'viewed',
-        context: { modalOpened: true }
-      });
-    }
-  }, [isOpen, helpContent]);
-  
-  // Track section viewing
-  useEffect(() => {
-    if (helpContent?.content.sections[currentSection]) {
-      const sectionKey = helpContent.content.sections[currentSection].id;
-      
-      updateProgress.mutate({
-        contentKey: helpContent.contentKey,
-        sectionKey
-      });
-      
-      trackAnalytics.mutate({
-        contentKey: helpContent.contentKey,
-        sectionKey,
-        action: 'viewed'
-      });
-    }
-  }, [currentSection, helpContent]);
-  
-  const handleSectionNavigation = (sectionIndex: number) => {
-    setCurrentSection(sectionIndex);
-  };
-  
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      trackAnalytics.mutate({
-        contentKey: helpContent?.contentKey || 'unknown',
-        action: 'searched',
-        context: { query: query.trim() }
-      });
-    }
-  };
-  
-  const handleFeedback = async (rating: number, feedback?: string) => {
-    if (!helpContent) return;
-    
-    await updateProgress.mutate({
-      contentKey: helpContent.contentKey,
-      rating,
-      feedback,
-      completed: true
-    });
-    
-    trackAnalytics.mutate({
-      contentKey: helpContent.contentKey,
-      action: rating >= 4 ? 'helpful' : 'not_helpful',
-      context: { rating, feedback }
-    });
-    
-    toast.success('Thank you for your feedback!');
-    setShowFeedback(false);
-  };
-  
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] font-display">
-      <div className="bg-slate-800 flex flex-col h-full w-full bg-noise-texture relative overflow-hidden">
-        {/* Enhanced Visual Layers */}
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-400/10 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-indigo-600/10 mix-blend-soft-light pointer-events-none" />
-        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-sky-400/10 blur-3xl opacity-50 rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-indigo-600/10 blur-3xl opacity-50 rounded-full pointer-events-none" />
-        
-        {/* Enhanced Header with Cloud Features */}
-        <div className="flex justify-between items-center pt-10 pb-4 px-6 backdrop-blur-sm bg-slate-900/20 border-b border-slate-700/20 flex-shrink-0 relative">
-          <div className="flex items-center gap-4">
-            <h2 className="text-3xl font-bold text-yellow-400 tracking-wide drop-shadow-lg">
-              {helpContent?.title || t('instructionsModal.title', 'How It Works')}
-            </h2>
-            {helpContent?.metadata.difficulty && (
-              <span className="px-2 py-1 bg-indigo-600/30 text-indigo-200 text-xs rounded-full border border-indigo-500/30">
-                {helpContent.metadata.difficulty}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Cloud sync status indicator */}
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <HiOutlineCloud className="w-4 h-4" />
-              <span>Synced</span>
-            </div>
-            
-            {/* Search functionality */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search help..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-48 px-3 py-1 bg-slate-700/50 border border-slate-600/50 rounded text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <HiOutlineMagnifyingGlass className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-            </div>
-            
-            <button onClick={onClose} className="text-slate-300 hover:text-slate-100">
-              <HiOutlineXMark className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-        
-        {/* Progress indicator */}
-        {helpContent && helpProgress && (
-          <div className="px-6 py-2 bg-slate-800/30">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-300">
-                Progress: {helpProgress.sectionsViewed.length}/{helpContent.content.sections.length} sections
-              </span>
-              <div className="w-32 bg-slate-700 rounded-full h-2">
-                <div 
-                  className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${(helpProgress.sectionsViewed.length / helpContent.content.sections.length) * 100}%` 
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex flex-1 min-h-0">
-          {/* Enhanced Navigation Sidebar */}
-          {helpContent && helpContent.content.sections.length > 1 && (
-            <div className="w-64 bg-slate-800/30 border-r border-slate-700/20 p-4 overflow-y-auto">
-              <h3 className="text-lg font-semibold text-slate-200 mb-4">Sections</h3>
-              <nav className="space-y-2">
-                {helpContent.content.sections.map((section, index) => (
-                  <button
-                    key={section.id}
-                    onClick={() => handleSectionNavigation(index)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      currentSection === index
-                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/30'
-                        : 'text-slate-300 hover:bg-slate-700/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {helpProgress?.sectionsViewed.includes(section.id) && (
-                        <HiOutlineCheckCircle className="w-4 h-4 text-emerald-400" />
-                      )}
-                      <span className="truncate">{section.title}</span>
-                    </div>
-                  </button>
-                ))}
-              </nav>
-              
-              {/* Quick actions */}
-              <div className="mt-6 pt-4 border-t border-slate-700/20">
-                <button
-                  onClick={() => setShowFeedback(true)}
-                  className="w-full px-3 py-2 text-sm text-slate-300 hover:text-slate-200 hover:bg-slate-700/30 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <HiOutlineHeart className="w-4 h-4" />
-                    Rate this help
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Enhanced Scrollable Content */}
-          <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="flex items-center gap-3 text-slate-300">
-                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  Loading cloud content...
-                </div>
-              </div>
-            ) : helpContent ? (
-              <div className="space-y-6">
-                <CloudEnhancedHelpSection 
-                  section={helpContent.content.sections[currentSection]}
-                  contentKey={helpContent.contentKey}
-                />
-                
-                {/* Navigation controls */}
-                <div className="flex justify-between items-center pt-6 border-t border-slate-700/20">
-                  <button
-                    onClick={() => handleSectionNavigation(Math.max(0, currentSection - 1))}
-                    disabled={currentSection === 0}
-                    className="px-4 py-2 bg-slate-700 disabled:bg-slate-800 disabled:opacity-50 text-slate-200 rounded-lg hover:bg-slate-600 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <HiOutlineArrowLeft className="w-4 h-4" />
-                      Previous
-                    </div>
-                  </button>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">
-                      {currentSection + 1} of {helpContent.content.sections.length}
-                    </span>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleSectionNavigation(Math.min(helpContent.content.sections.length - 1, currentSection + 1))}
-                    disabled={currentSection === helpContent.content.sections.length - 1}
-                    className="px-4 py-2 bg-slate-700 disabled:bg-slate-800 disabled:opacity-50 text-slate-200 rounded-lg hover:bg-slate-600 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      Next
-                      <HiOutlineArrowRight className="w-4 h-4" />
-                    </div>
-                  </button>
-                </div>
-                
-                {/* Related content suggestions */}
-                {helpContent.content.relatedContent.length > 0 && (
-                  <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/30">
-                    <h4 className="text-slate-200 font-semibold mb-2">Related Topics</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {helpContent.content.relatedContent.map((relatedKey) => (
-                        <button
-                          key={relatedKey}
-                          className="px-3 py-1 bg-indigo-600/20 text-indigo-300 text-sm rounded-full hover:bg-indigo-600/30 transition-colors"
-                        >
-                          {relatedKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <HiOutlineExclamationTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-                  <p className="text-slate-300 mb-2">Help content not available</p>
-                  <p className="text-sm text-slate-400">Please check your connection and try again.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Feedback Modal */}
-        {showFeedback && (
-          <FeedbackModal
-            isOpen={showFeedback}
-            onClose={() => setShowFeedback(false)}
-            onSubmit={handleFeedback}
-            contentTitle={helpContent?.title}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Enhanced help section component
-const CloudEnhancedHelpSection = ({ section, contentKey }: { 
-  section: HelpSection; 
-  contentKey: string; 
-}) => {
-  const trackAnalytics = useHelpAnalytics();
-  
-  const handleInteractiveAction = (action: string) => {
-    trackAnalytics.mutate({
-      contentKey,
-      sectionKey: section.id,
-      action: 'viewed',
-      context: { interactiveAction: action }
-    });
-  };
-  
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3 mb-4">
-        {section.iconName && (
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${
-            section.iconColor || 'from-indigo-500 to-purple-500'
-          } flex items-center justify-center`}>
-            <DynamicIcon name={section.iconName} className="w-5 h-5 text-white" />
-          </div>
-        )}
-        <h3 className="text-2xl font-bold text-yellow-300">{section.title}</h3>
-      </div>
-      
-      <div className="bg-slate-900/50 rounded-lg p-6 border border-slate-700/50">
-        <div 
-          className="prose prose-invert prose-slate max-w-none"
-          dangerouslySetInnerHTML={{ __html: section.content }}
-        />
-        
-        {section.subsections && (
-          <div className="mt-6 space-y-4">
-            {section.subsections.map((subsection, index) => (
-              <div key={index} className="bg-slate-800/50 rounded-lg p-4">
-                <h4 className="font-semibold text-indigo-300 mb-2">{subsection.title}</h4>
-                <p className="text-sm text-slate-300 mb-3">{subsection.content}</p>
-                
-                {subsection.code && (
-                  <pre className="bg-slate-900 rounded p-3 text-sm text-slate-200 overflow-x-auto">
-                    <code>{subsection.code}</code>
-                  </pre>
-                )}
-                
-                {subsection.tips && (
-                  <div className="mt-3">
-                    <h5 className="text-sm font-medium text-emerald-300 mb-2">Tips:</h5>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      {subsection.tips.map((tip, tipIndex) => (
-                        <li key={tipIndex} className="flex items-start gap-2">
-                          <HiOutlineLightBulb className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {section.videoUrl && (
-          <div className="mt-4">
-            <button
-              onClick={() => handleInteractiveAction('video-play')}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              <HiOutlinePlayCircle className="w-5 h-5" />
-              Watch Video Guide
-            </button>
-          </div>
-        )}
-        
-        {section.interactive && (
-          <div className="mt-4 bg-indigo-900/30 rounded-lg p-4 border border-indigo-500/30">
-            <div className="flex items-center gap-2 text-indigo-200 mb-2">
-              <HiOutlineCursor className="w-4 h-4" />
-              <span className="font-medium">Try it yourself</span>
-            </div>
-            <p className="text-sm text-slate-300">
-              This feature includes interactive elements. Click the buttons below to see them in action.
-            </p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-};
-```
-
-## Migration from localStorage Version
-
-### Help System Migration
-**File**: `src/utils/migration/migrateHelpSystemToSupabase.ts`
-```typescript
-export const migrateHelpSystemToSupabase = async (userId: string) => {
-  // 1. Extract localStorage help progress if any
-  const viewedSections = localStorage.getItem('viewedHelpSections');
-  const helpPreferences = localStorage.getItem('helpPreferences');
-  
-  let parsedViewed: string[] = [];
-  let parsedPrefs = {};
-  
-  try {
-    if (viewedSections) parsedViewed = JSON.parse(viewedSections);
-    if (helpPreferences) parsedPrefs = JSON.parse(helpPreferences);
-  } catch (error) {
-    logger.warn('Failed to parse help system data:', error);
   }
-  
-  // 2. Create initial help progress for main instructions
-  if (parsedViewed.length > 0) {
-    const progressData = {
-      user_id: userId,
-      content_key: 'main-instructions',
-      sections_viewed: parsedViewed,
-      last_viewed_at: new Date().toISOString(),
-      completed: parsedViewed.length >= 7 // Assuming 7 main sections
+
+  private transformContentFromSupabase(data: any): HelpContent {
+    return {
+      id: data.id,
+      categoryId: data.category_id,
+      title: data.title,
+      content: data.content,
+      contentType: data.content_type,
+      languageCode: data.language_code,
+      ordering: data.ordering,
+      isActive: data.is_active,
+      targetContext: data.target_context,
+      prerequisites: data.prerequisites || [],
+      difficultyLevel: data.difficulty_level,
+      estimatedReadTime: data.estimated_read_time,
+      tags: data.tags || [],
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      category: data.category ? this.transformCategoryFromSupabase(data.category) : undefined
     };
-    
-    const { error } = await supabase
-      .from('user_help_progress')
-      .insert([progressData]);
-    
-    if (error) {
-      logger.warn('Failed to migrate help progress:', error);
-    }
   }
-  
-  // 3. Create initial help content (admin task, but can be automated)
-  await createInitialHelpContent();
-  
-  // 4. Clean up localStorage
-  localStorage.removeItem('viewedHelpSections');
-  localStorage.removeItem('helpPreferences');
-  
-  logger.info('Help system data migrated to Supabase');
-};
 
-const createInitialHelpContent = async () => {
-  // This would typically be done by admins, but for migration we can create basic content
-  const initialContent = {
-    content_key: 'main-instructions',
-    language: 'en',
-    title: 'How It Works',
-    subtitle: 'Complete guide to MatchOps Cloud',
-    section_order: 0,
-    content: {
-      sections: [
-        {
-          id: 'player-selection',
-          title: 'Player Selection (Top Bar)',
-          content: 'Learn how to select and manage players with cloud sync.',
-          iconName: 'UserGroup',
-          iconColor: 'from-blue-500 to-cyan-500'
-        },
-        // ... other sections
-      ],
-      resources: [],
-      relatedContent: [],
-      searchTags: ['basics', 'getting-started', 'cloud', 'sync']
-    },
-    metadata: {
-      difficulty: 'beginner',
-      estimatedReadTime: 10
-    },
-    is_active: true
-  };
-  
-  const { error } = await supabase
-    .from('help_content')
-    .upsert([initialContent], {
-      onConflict: 'content_key,language,version'
-    });
-  
-  if (error) {
-    logger.warn('Failed to create initial help content:', error);
+  private transformProgressFromSupabase(data: any): UserHelpProgress {
+    return {
+      id: data.id,
+      userId: data.user_id,
+      helpContentId: data.help_content_id,
+      status: data.status,
+      progressPercentage: data.progress_percentage,
+      timeSpentSeconds: data.time_spent_seconds,
+      lastAccessedAt: data.last_accessed_at,
+      completedAt: data.completed_at,
+      notes: data.notes,
+      rating: data.rating,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      helpContent: data.help_content ? this.transformContentFromSupabase(data.help_content) : undefined
+    };
   }
-};
+}
+
+// Export singleton instance
+export const helpContentManager = new HelpContentManager();
 ```
 
-## Benefits of Supabase Migration
+**Immediate Verification:**
+```bash
+# Check TypeScript compilation
+npx tsc --noEmit
 
-### Enhanced Content Management
-- **Dynamic Content**: Help content can be updated without app deployments
-- **Version Control**: Track content changes and maintain version history
-- **Multi-language Support**: Seamless language switching with fallbacks
-- **Community Contributions**: Users can suggest improvements and translations
+# Verify file created correctly
+ls -la src/utils/helpContent.ts
+wc -l src/utils/helpContent.ts  # Should be around 250+ lines
+```
 
-### Improved User Experience
-- **Personalized Progress**: Track which sections users have viewed
-- **Smart Recommendations**: Suggest relevant content based on usage patterns
-- **Offline Access**: Cache frequently accessed help content
-- **Real-time Updates**: Get notified when help content is updated
+**Validation Checklist:**
+- [ ] File created at correct location
+- [ ] TypeScript compilation passes
+- [ ] All imports resolve correctly
+- [ ] Class structure follows existing patterns
+- [ ] Search functionality implemented
+- [ ] Progress tracking included
 
-### Analytics & Insights
-- **Usage Tracking**: Understand which help sections are most/least helpful
-- **Search Analytics**: Identify gaps in help content based on search queries
-- **Feedback Loop**: Collect and analyze user feedback for continuous improvement
-- **Performance Metrics**: Track help system effectiveness and user satisfaction
+### [Continue with remaining steps following the same detailed format...]
 
-## Developer Checklist
+## Error Recovery Procedures
 
-### Database Setup
-- [ ] Help content tables with version control and RLS
-- [ ] User progress tracking with analytics
-- [ ] Help content contribution system
-- [ ] Database indexes for optimal query performance
+### Database Rollback
+If database steps fail:
+```sql
+-- Full rollback of all tables
+ALTER TABLE help_content DROP CONSTRAINT IF EXISTS fk_help_content_category;
+DROP TABLE IF EXISTS user_help_progress;
+DROP TABLE IF EXISTS help_content;
+DROP TABLE IF EXISTS help_categories;
+```
 
-### API Integration
-- [ ] SupabaseProvider enhanced with help system operations
-- [ ] React Query hooks for help content and progress
-- [ ] Real-time subscriptions for content updates
-- [ ] Analytics tracking for help system usage
+### Code Rollback
+If code steps fail:
+```bash
+# See what changed
+git diff
 
-### UI Components
-- [ ] Cloud-enhanced instructions modal with progress tracking
-- [ ] Help content search and navigation
-- [ ] User feedback and rating system
-- [ ] Multi-language support with dynamic content
+# Rollback specific files
+git checkout HEAD -- src/utils/helpContent.ts
+git checkout HEAD -- src/types/index.ts
+git checkout HEAD -- src/components/InstructionsModal.tsx
 
-### UX Features
-- [ ] Personalized help recommendations
-- [ ] Progress tracking across devices
-- [ ] Real-time content updates
-- [ ] Community contribution features
+# Or full rollback
+git reset --hard HEAD
+```
 
-### Testing
-- [ ] Unit tests for help content hooks and components
-- [ ] Integration tests for progress tracking
-- [ ] E2E tests for help system workflows
-- [ ] Migration testing for localStorage → Supabase transition
+### Common Issues & Solutions
+
+**"Foreign key constraint violations"**
+1. Ensure help_categories is created before help_content
+2. Verify category IDs exist when inserting content
+3. Check UUID format is correct
+
+**"RLS policy errors"**
+1. Verify authenticated users can read help content
+2. Check user_help_progress policies allow user access
+3. Test policies in SQL editor with actual user IDs
+
+**"Content not displaying correctly"**
+1. Verify markdown rendering works in InstructionsModal
+2. Check content encoding and special characters
+3. Test with different content types (markdown, html, text)
+
+## Testing Validation
+
+### Manual Testing Checklist
+After completing all steps:
+- [ ] **Help categories display** correctly in enhanced modal
+- [ ] **Content renders properly** (markdown formatting works)
+- [ ] **Progress tracking** updates when content is read
+- [ ] **Context-aware help** shows relevant content
+- [ ] **Search functionality** finds relevant content
+- [ ] **User preferences** persist across sessions
+
+### Automated Testing
+```bash
+# Run existing tests to ensure no regressions
+npm test
+
+# Run TypeScript checking
+npx tsc --noEmit
+
+# Run linting if available
+npm run lint
+```
+
+## Definition of Done
+This feature is complete when:
+- [ ] All progress tracking checkboxes are checked
+- [ ] All validation checklists pass
+- [ ] Enhanced InstructionsModal works with dynamic content
+- [ ] Progress tracking functions correctly
+- [ ] Context-aware help provides relevant suggestions
+- [ ] Search returns meaningful results
+- [ ] Multi-language support ready (structure in place)
+- [ ] No existing functionality is broken
+
+## Time Tracking Template
+```
+## Enhanced Help System Implementation Log
+**Start Time**: [FILL IN]
+**Estimated Total**: 3.8 hours
+**Actual Total**: [UPDATE AS YOU GO]
+
+### Phase 1: Database Foundation (Est: 20min)
+- Step 1.1: [ACTUAL TIME] vs 7min estimated
+- Step 1.2: [ACTUAL TIME] vs 5min estimated
+
+### Issues Encountered:
+- [LOG ANY PROBLEMS AND SOLUTIONS]
+
+### Notes:
+- [ANY OBSERVATIONS OR MODIFICATIONS TO THE PLAN]
+```
+
+This enhanced help system will provide users with contextual, trackable guidance that adapts to their experience level and current context within the application.
