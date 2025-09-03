@@ -14,6 +14,8 @@
     "test:fast": "LOG_LEVEL=error jest --testPathIgnorePatterns='supabase|import|backup|export|useForm.test|useRosterSettingsModalState|useSettingsModalState|useViewMode' --maxWorkers=4 --silent",
     "test:slow": "LOG_LEVEL=error jest --testPathPattern='supabase|import|backup|export' --maxWorkers=2 --silent",
     "test:ci": "NODE_OPTIONS='--max-old-space-size=6144' LOG_LEVEL=error jest --coverage --maxWorkers=2 --silent --passWithNoTests --forceExit --testTimeout=10000",
+    "test:ci:fast": "LOG_LEVEL=error jest --testPathPattern='(utils|hooks|stores)/__tests__' --no-coverage --maxWorkers=1 --passWithNoTests --testTimeout=5000 --silent",
+    "test:ci:critical": "LOG_LEVEL=error jest --testPathPattern='(useGameState|safeJson|typeValidation|atomicSave|useOfflineManager)\\.test' --coverage --maxWorkers=1 --passWithNoTests --testTimeout=5000 --silent --coverageReporters=text-summary --coverageThreshold='{}'",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",

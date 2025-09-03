@@ -4,8 +4,8 @@
 Enhance the existing StartScreen component to intelligently adapt between first-time user and experienced user interfaces based on cloud-synced user state.
 
 ## Prerequisites
-- ✅ Smart Roster Detection implemented (provides `useStateDetection` hook)
-- ✅ Existing StartScreen component at `src/app/page.tsx`
+- ⚠️ Smart Roster Detection implemented (provides `useStateDetection` hook) OR implement basic state detection
+- ✅ Existing StartScreen component at `src/components/StartScreen.tsx`
 - ✅ Current authentication system working
 
 ## Progress Tracking
@@ -40,31 +40,26 @@ Enhance the existing StartScreen component to intelligently adapt between first-
 
 ## Implementation Details
 
-### Step 1.1: Add User Preferences Table
+### Step 1.1: Extend App Settings Table
 **File**: Supabase SQL Editor
 **Time**: 5 minutes
-**Validation**: Query returns empty result set
+**Validation**: Columns added successfully without conflicts
+
+**⚠️ SCHEMA CHANGE**: Using existing `app_settings` table instead of creating duplicate `user_preferences`
 
 ```sql
-CREATE TABLE user_preferences (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  start_screen_mode TEXT DEFAULT 'auto' CHECK (start_screen_mode IN ('auto', 'simple', 'advanced')),
-  preferred_language TEXT DEFAULT 'en',
-  last_active_feature TEXT,
-  onboarding_completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  UNIQUE(user_id)
-);
+-- Extend existing app_settings table for adaptive start screen
+ALTER TABLE app_settings 
+ADD COLUMN IF NOT EXISTS start_screen_mode TEXT DEFAULT 'auto' CHECK (start_screen_mode IN ('auto', 'simple', 'advanced'));
 
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings 
+ADD COLUMN IF NOT EXISTS last_active_feature TEXT;
 
-CREATE POLICY "Users can manage their own preferences" ON user_preferences
-  FOR ALL USING (auth.uid() = user_id);
+-- Note: language and onboarding already exist as 'language' and 'has_seen_app_guide'
 
-CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+-- RLS already enabled on app_settings table
+-- Verify existing policy covers user access to their own settings
+-- Index already exists on app_settings(user_id) as UNIQUE constraint
 ```
 
 ### Step 1.2: Create User Preferences Types
@@ -211,7 +206,7 @@ CREATE INDEX idx_start_screen_analytics_user ON start_screen_analytics(user_id, 
 ```
 
 ### Step 3.1: Extract StartScreen Logic
-**File**: `src/app/page.tsx`
+**File**: `src/components/StartScreen.tsx`
 **Time**: 10 minutes
 **Validation**: Component still renders correctly
 
@@ -238,7 +233,7 @@ const determineUIMode = (
 ```
 
 ### Step 3.2: Add State Detection Integration
-**File**: `src/app/page.tsx`
+**File**: `src/components/StartScreen.tsx`
 **Time**: 10 minutes
 
 ```typescript
@@ -260,7 +255,7 @@ export default function StartScreen() {
 ```
 
 ### Step 3.3: Implement Adaptive Button States
-**File**: `src/app/page.tsx`
+**File**: `src/components/StartScreen.tsx`
 **Time**: 15 minutes
 **Validation**: Buttons show correct enabled/disabled states
 

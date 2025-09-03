@@ -16,9 +16,9 @@ Transform the existing InstructionsModal into a comprehensive, cloud-enhanced he
 ### Understanding Current Architecture
 **CRITICAL**: Read these files before proceeding:
 1. `src/components/InstructionsModal.tsx` - Current help/instructions modal
-2. `src/i18n/` - Current internationalization setup
+2. `src/i18n.ts` and `public/locales/` - Current internationalization setup
 3. `src/context/AuthContext.tsx` - User authentication system
-4. `src/hooks/useUserPreferences.ts` - If exists from adaptive start screen
+4. `src/types/index.ts` - Current type definitions
 
 **Verification Commands:**
 ```bash
@@ -26,7 +26,7 @@ Transform the existing InstructionsModal into a comprehensive, cloud-enhanced he
 ls -la src/components/InstructionsModal.tsx src/context/AuthContext.tsx
 
 # Find current i18n setup
-find src -name "*i18n*" -o -name "*translation*" | head -5
+ls -la src/i18n.ts public/locales/ | head -5
 
 # Check current help/instructions content
 grep -r "instruction\|help\|guide" src/components/ | head -3

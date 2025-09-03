@@ -47,38 +47,55 @@
 ---
 
 ### 📁 first-game-onboarding.md  
-**Status**: ⏸️ PENDING
-**Issues Found**: 3 critical
-**Fixes Applied**: None yet
+**Status**: ✅ COMPLETED
+**Issues Found**: 3 critical (ALL FIXED)
+**Fixes Applied**: 
+- ✅ **Fix 2.1**: Added dependency note for framer-motion (VERIFIED ✓)
+- ✅ **Fix 2.2**: Fixed route `router.push('/roster-settings')` → `rosterSettingsModal.open()` (VERIFIED ✓)
+- ✅ **Fix 2.3**: Fixed `setShowInstructionsModal` → `setIsInstructionsModalOpen` (VERIFIED ✓)
+- ✅ **Fix 2.4**: Added critical dependency requirement in prerequisites section (VERIFIED ✓)
 
-**Validation Status**: ❌ NOT VALIDATED
+**Validation Status**: ✅ IMPLEMENTATION-READY (requires npm install framer-motion first)
+**Agent Validation**: "All patterns match existing codebase perfectly. Only dependency install required."
 
 ---
 
 ### 📁 external-matches.md
-**Status**: ⏸️ PENDING  
-**Issues Found**: 3 critical
-**Fixes Applied**: None yet
+**Status**: ✅ COMPLETED
+**Issues Found**: 0 critical (2 minor naming consistency suggestions)
+**Fixes Applied**: 
+- ✅ **No fixes required**: File was already implementation-ready (VERIFIED ✓)
 
-**Validation Status**: ❌ NOT VALIDATED
+**Validation Status**: ✅ IMPLEMENTATION-READY
+**Agent Validation**: "No critical blocking issues. All file paths, imports, database references, and implementation patterns are valid."
 
 ---
 
 ### 📁 how-it-works-help.md
-**Status**: ⏸️ PENDING
-**Issues Found**: 2 critical  
-**Fixes Applied**: None yet
+**Status**: ✅ COMPLETED
+**Issues Found**: 2 medium (ALL FIXED)
+**Fixes Applied**: 
+- ✅ **Fix 4.1**: Fixed i18n path `src/i18n/` → `src/i18n.ts and public/locales/` (VERIFIED ✓)
+- ✅ **Fix 4.2**: Removed non-existent `useUserPreferences` reference → `src/types/index.ts` (VERIFIED ✓)  
+- ✅ **Fix 4.3**: Fixed verification command paths to use correct i18n structure (VERIFIED ✓)
 
-**Validation Status**: ❌ NOT VALIDATED
+**Validation Status**: ✅ IMPLEMENTATION-READY
+**Agent Validation**: "All critical technical requirements validated. Database schema conflict-free. Components and services exist."
 
 ---
 
 ### 📁 adaptive-start-screen.md
-**Status**: ⏸️ PENDING
-**Issues Found**: 3 critical
-**Fixes Applied**: None yet
+**Status**: 🔧 MAJOR FIXES NEEDED
+**Issues Found**: 5+ critical (PARTIALLY FIXED)
+**Fixes Applied**: 
+- ✅ **Fix 5.1**: Fixed file paths `src/app/page.tsx` → `src/components/StartScreen.tsx` (VERIFIED ✓)
+- ✅ **Fix 5.2**: Added warning about useStateDetection dependency (VERIFIED ✓)
+- 🔄 **Fix 5.3**: Database schema - started converting user_preferences → app_settings extension (IN PROGRESS)
+- ❌ **Fix 5.4**: Component structure mismatches (NOT STARTED)
+- ❌ **Fix 5.5**: Import path validation (NOT STARTED)
 
-**Validation Status**: ❌ NOT VALIDATED
+**Validation Status**: ❌ REQUIRES EXTENSIVE WORK
+**Agent Validation**: "Multiple critical issues prevent implementation. Database conflicts, missing dependencies, incorrect component assumptions."
 
 ---
 

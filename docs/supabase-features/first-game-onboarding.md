@@ -4,6 +4,12 @@
 Add a comprehensive three-layer onboarding system to guide new users through their first game creation process with visual overlays, progress tracking, and cloud-synced completion state.
 
 ## Prerequisites
+
+### 🚨 CRITICAL DEPENDENCY REQUIREMENT
+**MUST INSTALL FIRST**: `npm install framer-motion`
+This package is required for animation components in this implementation.
+
+### Feature Dependencies
 - ✅ Smart Roster Detection implemented (provides user state)
 - ✅ Adaptive Start Screen implemented (provides preferences system)
 - ✅ Existing HomePage component at `src/components/HomePage.tsx`
@@ -339,6 +345,8 @@ function transformOnboardingFromSupabase(data: any): UserOnboarding {
 **Time**: 25 minutes
 **Validation**: Overlay displays correctly over soccer field
 
+**⚠️ DEPENDENCY NOTE**: This component uses framer-motion for animations. Install with `npm install framer-motion` or replace motion elements with CSS transitions.
+
 ```typescript
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -490,10 +498,11 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 ```typescript
 // Add imports
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { useRosterSettingsModalWithHandlers } from '@/hooks/useRosterSettingsModalState';
 import { WelcomeOverlay } from './onboarding/WelcomeOverlay';
 import { OnboardingBanner } from './onboarding/OnboardingBanner';
 
-// In HomePage component
+// In HomePage component (assuming existing isInstructionsModalOpen state exists)
 export const HomePage = () => {
   const { 
     shouldShowOnboarding, 
@@ -502,20 +511,21 @@ export const HomePage = () => {
     markInstructionsOpened,
     markFirstGameCreated 
   } = useOnboarding();
-
+  
+  const rosterSettingsModal = useRosterSettingsModalWithHandlers();
   const router = useRouter();
 
   const handleGetStarted = () => {
     markWelcomeOverlaySeen();
-    // Redirect to roster setup if no players, otherwise show instructions
-    router.push('/roster-settings');
+    // Open roster settings modal to help user add players
+    rosterSettingsModal.open();
   };
 
   const handleLearnMore = () => {
     markWelcomeOverlaySeen();
     markInstructionsOpened();
-    // Open instructions modal
-    setShowInstructionsModal(true);
+    // Open instructions modal (using existing HomePage pattern)
+    setIsInstructionsModalOpen(true);
   };
 
   return (
