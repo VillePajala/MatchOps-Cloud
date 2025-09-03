@@ -18,7 +18,7 @@ Add intelligent state detection to prevent users from encountering empty roster 
 1. `src/context/AuthContext.tsx` - How authentication currently works
 2. `src/types/index.ts` - Current type definitions  
 3. `src/lib/supabase.ts` - Current Supabase setup
-4. `src/app/page.tsx` - Current StartScreen component
+4. `src/components/StartScreen.tsx` - Current StartScreen component
 5. `src/lib/storage/supabaseProvider.ts` - How database queries work
 
 **Verification Commands:**
@@ -301,7 +301,7 @@ rm /tmp/test-types.ts
 **Pre-Checks:**
 - [ ] Directory `src/hooks/` exists
 - [ ] Step 2.1 completed (types available)
-- [ ] Can import from existing hooks (check `src/hooks/useAuth.ts` or similar)
+- [ ] Can import from existing hooks (check `src/context/AuthContext.tsx` or similar)
 
 **Implementation:**
 1. Create the new file:
