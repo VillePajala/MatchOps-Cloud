@@ -1,158 +1,261 @@
-# External Matches (Player Stat Adjustments)
+# Player Stat Adjustments (External Game Stats)
 
 ## Overview
-System for integrating games played outside the app into player statistics and team records, allowing comprehensive tracking of all player activity regardless of where games are played.
+Individual player stat adjustment system that allows manual addition of statistics from games played outside the app. Integrates seamlessly into player profiles and statistical calculations.
 
-## Current App vs New Behavior
+**⚠️ Implementation Note**: This document focuses on UI/UX behavior and business logic. The following technical aspects are NOT covered and must be investigated in the target app version before implementation:
+- Data storage mechanisms (how adjustments are persisted and retrieved)
+- State management approach (how adjustment state is handled across components)
+- Authentication requirements (if user identity affects adjustment permissions)
+- Performance considerations for stat calculations (how adjustments integrate with game stats)
 
-### Current App
-- Statistics only include games played within the app
-- No way to account for external games or tournaments
-- Player statistics may not reflect complete playing history
+## Business Logic
 
-### With External Matches
-- **Comprehensive stat integration** including all games played
-- **External game management** with full edit/delete capabilities  
-- **Flexible statistical inclusion** options for different contexts
-- **Complete player history** across all playing environments
+### Core Data Structure
+```typescript
+interface PlayerStatAdjustment {
+  id: string;                    // Unique identifier
+  playerId: string;              // Player being adjusted
+  seasonId?: string;             // Optional season association
+  teamId?: string;               // Optional team context
+  tournamentId?: string;         // Optional tournament context
+  externalTeamName?: string;     // Team player represented
+  opponentName?: string;         // Opposition team name
+  scoreFor?: number;             // Player's team score
+  scoreAgainst?: number;         // Opposition score
+  gameDate?: string;             // Game date (ISO string)
+  homeOrAway?: 'home' | 'away' | 'neutral';
+  includeInSeasonTournament?: boolean; // Include in season/tournament stats
+  gamesPlayedDelta: number;      // Games to add (can be 0)
+  goalsDelta: number;            // Goals to add (can be 0)
+  assistsDelta: number;          // Assists to add (can be 0)
+  note?: string;                 // Optional description
+  createdBy?: string;            // Optional user identifier
+  appliedAt: string;             // ISO timestamp of creation
+}
+```
 
-## User Experience
+### Adjustment Integration Logic
+- **Always Included**: Adjustments always count toward individual player career statistics
+- **Optional Season/Tournament Inclusion**: `includeInSeasonTournament` flag controls context-specific stats
+- **Delta-Based**: Uses positive delta values (negative stats not allowed in UI)
+- **Cumulative**: Multiple adjustments for same player are additive
 
-### External Game Entry
-**Game Details Form**:
-- **Opponent Information**: External team name and details
-- **Game Context**: Date, location, competition level
-- **Score Information**: Final scores for both teams
-- **Game Settings**: Periods played, duration, special conditions
-- **Administrative Details**: Referee, venue, weather, notes
+### Validation Rules
+1. **Required Fields**: `externalTeamName` and `opponentName` must be non-empty strings
+2. **Non-Negative Stats**: `gamesPlayedDelta`, `goalsDelta`, `assistsDelta` must be >= 0
+3. **Minimum Data**: At least one of games, goals, or assists must be > 0
+4. **Realistic Limits**: Goals and assists cannot exceed 20 per game (20 * gamesPlayedDelta)
+5. **Season Dependency**: If no seasons exist, user must create season first
 
-**Player Statistics Entry**:
-- **Individual Player Stats**: Goals, assists, appearances for each player
-- **Position Information**: Positions played during external game
-- **Playing Time**: Minutes or periods played per player
-- **Performance Notes**: Coach observations or special achievements
-- **Injury/Card Information**: Disciplinary actions or injuries sustained
+## UI/UX Implementation Details
 
-### Statistical Integration Options
-**Always Included Statistics**:
-- **Player Totals**: External games always count toward individual player career statistics
-- **Lifetime Tracking**: Complete playing history across all environments
-- **Individual Records**: Personal bests and achievements include external games
-- **Career Development**: Full picture of player progression over time
+### Access Point
+**Location**: Within Player Stats View component
+**Trigger**: "Add external stats" button below player statistics summary
+**Button Styling**:
+```css
+text-sm px-3 py-1.5 bg-slate-700 rounded 
+border border-slate-600 hover:bg-slate-600
+```
 
-**Optional Inclusion Settings**:
-- **Season Statistics**: Choice to include/exclude from current season totals
-- **Tournament Statistics**: Option to count toward tournament-specific records
-- **Team Statistics**: Flexible inclusion in team-based statistical analysis
-- **Comparative Analysis**: Option to view app-only vs complete statistics
+### Form Interface
 
-### External Game Management
-**Game Library**:
-- **Complete Game List**: All external games with searchable details
-- **Edit Capabilities**: Full editing of game details and player statistics
-- **Delete Options**: Remove external games with statistical impact warnings
-- **Duplicate Detection**: Warnings about potentially duplicate game entries
+**Form Container**:
+```css
+mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 
+bg-slate-800/60 p-4 rounded-lg border border-slate-600
+```
 
-**Data Organization**:
-- **Chronological Sorting**: Games organized by date alongside app games
-- **Opponent Grouping**: Games grouped by external teams played
-- **Competition Categorization**: Games organized by tournament or league context
-- **Player-Specific Views**: External games filtered by individual player participation
+**Form Fields Layout** (responsive grid):
 
-### Integration with Existing Features
-**Player Profiles**: 
-- **Complete Statistics**: Player cards show total stats including external games
-- **Game History**: Full chronological list of all games (app + external)
-- **Performance Trends**: Statistical analysis across all playing environments
-- **Achievement Recognition**: Career milestones account for all games played
+**Season Selection**:
+- **Type**: Dropdown select
+- **Options**: "No season" + all available seasons
+- **Styling**: `bg-slate-700 border border-slate-600 rounded-md text-white px-2 py-2 text-sm focus:ring-2 focus:ring-indigo-500`
+- **Behavior**: Optional field, can be left unselected
 
-**Season/Tournament Context**:
-- **Season Integration**: External games can be associated with app seasons
-- **Tournament Tracking**: External tournament participation recorded
-- **Flexible Reporting**: Statistics can be filtered by context (app-only, external-only, combined)
-- **Historical Analysis**: Long-term trends across all game types
+**Tournament Selection**:
+- **Type**: Dropdown select  
+- **Options**: "No tournament" + filtered tournaments for selected season
+- **Dependency**: Tournament list updates when season changes
+- **Styling**: Same as season select
 
-## UI Elements
+**External Team Name**:
+- **Type**: Text input
+- **Required**: Yes
+- **Validation**: Must be non-empty after trim()
+- **Placeholder**: Player's team name for the external game
 
-### External Game Creation Interface
-**Game Entry Form**:
-- **Multi-Step Form**: Organized sections for game details, scores, and player stats
-- **Auto-Save Progress**: Form progress saved automatically to prevent data loss
-- **Player Selection**: Choose which players participated from current roster
-- **Quick Entry**: Streamlined interface for rapid data entry
+**Opponent Name**:
+- **Type**: Text input
+- **Required**: Yes
+- **Validation**: Must be non-empty after trim()
+- **Placeholder**: Opposition team name
 
-**Player Statistics Grid**:
-- **Roster Display**: Current roster with checkboxes for participation
-- **Inline Editing**: Direct entry of goals, assists, and other statistics
-- **Position Assignment**: Dropdown or selection for positions played
-- **Notes Field**: Individual player notes for performance observations
+**Score Fields**:
+- **Team Score**: Number input for player's team score
+- **Opponent Score**: Number input for opposition score
+- **Optional**: Both can be left empty
+- **Type**: `number` inputs allowing empty string
 
-### External Game Management
-**Game Library Interface**:
-- **List/Card View**: Games displayed in organized, searchable format
-- **Quick Filters**: Filter by date, opponent, competition, or participating players
-- **Bulk Operations**: Multi-select for bulk editing or deletion
-- **Export Options**: Export external game data for analysis or backup
+**Game Date**:
+- **Type**: Date input
+- **Optional**: Can be left empty
+- **Default**: Current date when form opens
+- **Format**: Standard HTML date input (YYYY-MM-DD)
 
-**Edit/Delete Options**:
-- **Full Edit Access**: Complete modification of game details and statistics
-- **Impact Warnings**: Clear indication of statistical changes before deletion
-- **Confirmation Dialogs**: Protection against accidental data loss
-- **Change History**: Optional tracking of modifications to external games
+**Home/Away/Neutral**:
+- **Type**: Dropdown select
+- **Options**: "Home", "Away", "Neutral"
+- **Default**: "Neutral"
+- **Context**: Relative to the external team the player represented
 
-### Statistical Display Integration
-**Player Cards Enhancement**:
-- **Complete Totals**: Statistics including all external games prominently displayed
-- **Context Toggle**: Switch between app-only and complete statistics
-- **Game Breakdown**: Visual indication of statistics source (app vs external)
-- **Career Timeline**: Chronological view including external game milestones
+**Statistics Inputs**:
+- **Games Played**: Number input, default 1, min 0
+- **Goals**: Number input, default 0, min 0  
+- **Assists**: Number input, default 0, min 0
+- **Styling**: Same as other form inputs
 
-**Reports and Analytics**:
-- **Flexible Filtering**: Statistical reports can include/exclude external games
-- **Comparative Views**: Side-by-side comparison of app vs complete statistics
-- **Export Options**: Statistical exports with external game inclusion controls
-- **Historical Trends**: Long-term analysis across all game environments
+**Include in Season/Tournament Stats**:
+- **Type**: Checkbox
+- **Default**: false (unchecked)
+- **Behavior**: When checked, stats count toward season/tournament totals
 
-### Visual Indicators
-**Game Type Identification**:
-- **Visual Badges**: Clear indicators distinguishing app games from external games
-- **Color Coding**: Consistent color scheme for different game types
-- **Icon System**: Icons representing external vs internal game sources
-- **Context Labels**: Text labels clarifying game source and type
+**Notes**:
+- **Type**: Textarea
+- **Optional**: Free-form text field
+- **Usage**: Coach observations, context, special circumstances
 
-## Data Management
+### Form Behavior
 
-### Import/Export Features
-**Bulk Import**:
-- **CSV Import**: Batch import of external games from spreadsheet data
-- **Template Support**: Pre-formatted templates for common external game formats
-- **Data Validation**: Import validation prevents duplicate or invalid entries
-- **Error Reporting**: Clear feedback on import issues with resolution guidance
+**Submission Process**:
+1. Client-side validation runs on form submit
+2. Validation errors show as browser alerts with translated messages
+3. Success creates new adjustment and updates player stats immediately
+4. Form resets to default values after successful submission
+5. Form collapses after successful submission
 
-**Export Capabilities**:
-- **Statistical Export**: Export complete statistics including external games
-- **Game Data Export**: Export external game details for backup or sharing
-- **Filtered Exports**: Export specific date ranges, players, or opponents
-- **Format Options**: Multiple export formats for different use cases
+**Validation Error Messages**:
+- Season required (when no seasons exist)
+- Team name required
+- Opponent name required  
+- Negative stats error
+- Empty stats error (all zeros)
+- Unrealistic goals/assists per game
 
-### Data Integrity
-**Validation Rules**:
-- **Date Validation**: External games must have valid dates and cannot conflict
-- **Player Validation**: Only current roster players can be assigned statistics
-- **Statistical Limits**: Reasonable limits on goals, assists, and other metrics
-- **Duplicate Prevention**: Detection and prevention of duplicate game entries
+**Form Reset Values**:
+- Games: 1
+- Goals: 0
+- Assists: 0
+- Notes: empty
+- Tournament: empty
+- External team: empty
+- Opponent: empty
+- Scores: empty
+- Date: current date
+- Home/Away: "Neutral"
+- Include in season: false
 
-**Historical Preservation**:
-- **Change Tracking**: Optional history of modifications to external games
-- **Archive Support**: Archived players maintain external game associations
-- **Data Migration**: External games preserve connections during roster changes
-- **Backup Integration**: External games included in all data backup operations
+### Adjustment Display
 
-## Key Behaviors
-- **Complete Player History**: All games count toward comprehensive player records
-- **Flexible Statistical Reporting**: Choose context-appropriate statistics for different purposes
-- **Seamless Integration**: External games integrated naturally with app-generated games
-- **Data Management**: Full CRUD capabilities for external game data
-- **Historical Accuracy**: Preserve complete playing history across all environments
-- **Administrative Flexibility**: Support for complex external game scenarios and edge cases
-- **Performance Analysis**: Enable complete performance analysis across all playing contexts
+**Integration Location**: Within player statistics, adjustments are seamlessly integrated into totals
+**Visual Indication**: No special visual distinction - adjustments appear as part of normal stats
+**Calculation**: Player stats include both game-based stats and all adjustments combined
+
+### Management Capabilities
+
+**CRUD Operations Available**:
+- **Create**: Via the form interface described above
+- **Read**: Adjustments are visible in calculated player statistics
+- **Update**: Edit existing adjustments (editing functionality exists)
+- **Delete**: Remove adjustments (deletion functionality exists)
+
+**Edit/Delete Interface**:
+- Adjustments can be edited after creation
+- Editing populates the same form with existing values
+- Deletion removes adjustment and recalculates player stats
+- Edit state managed via `editingAdjId` state variable
+
+## Responsive Design
+
+**Breakpoint Behavior**:
+- **Mobile (< sm)**: Single column form layout
+- **Tablet (sm)**: Two-column form layout
+- **Desktop (lg)**: Three-column form layout
+
+**Form Field Widths**: All inputs use `w-full` for consistent column filling
+
+## Internationalization
+
+**Translation Keys Used**:
+- `playerStats.addExternalStats` (default: "Add external stats")
+- `playerStats.season` (default: "Season")
+- `playerStats.noSeason` (default: "No season")
+- `playerStats.homeAway` (default: "Home/Away")
+- `playerStats.home` (default: "Home")
+- `playerStats.away` (default: "Away")
+- `playerStats.neutral` (default: "Neutral")
+- `playerStats.seasonRequired` (default: "Please create a season first.")
+- `playerStats.teamRequired` (default: "Team name is required.")
+- `playerStats.opponentRequired` (default: "Opponent name is required.")
+- `playerStats.negativeStatsError` (default: "Stats cannot be negative.")
+- `playerStats.emptyStatsError` (default: "Please enter at least one statistic (games, goals, or assists).")
+- `playerStats.unrealisticGoalsError` (default: "Goals per game seems unrealistic. Please check your input.")
+- `playerStats.unrealisticAssistsError` (default: "Assists per game seems unrealistic. Please check your input.")
+
+## Integration Points
+
+### Player Statistics Calculation
+- Adjustments are passed to `calculatePlayerStats` function via `adjustments` parameter
+- Statistics totals include both app-recorded games and manual adjustments
+- No visual distinction between sources in final display
+
+### Season/Tournament Context
+- Adjustments can be associated with specific seasons/tournaments
+- `includeInSeasonTournament` flag controls whether adjustment appears in context-specific reports
+- Tournament dropdown filters based on selected season
+
+### Data Persistence
+- Adjustments stored by player ID in indexed structure
+- Each player can have multiple adjustments
+- Adjustments persist independently of games and roster changes
+
+## Form Interaction Patterns
+
+### Real-Time Validation
+- **On Blur**: Validate individual fields when user leaves them
+- **On Submit**: Comprehensive validation before submission
+- **Visual Feedback**: Invalid fields should show error styling immediately
+
+### Dependent Field Logic
+```typescript
+// Tournament dropdown updates when season changes
+useEffect(() => {
+  if (selectedSeasonId) {
+    const seasonTournaments = tournaments.filter(t => t.seasonId === selectedSeasonId);
+    setAvailableTournaments(seasonTournaments);
+  }
+}, [selectedSeasonId, tournaments]);
+```
+
+### Form State Management
+- **Optimistic Updates**: Show changes immediately, revert on error
+- **Loading States**: Disable form during submission
+- **Reset Behavior**: Clear form after successful submission
+
+### Field Interdependencies  
+- Tournament options depend on selected season
+- "Include in Season/Tournament" only available if season/tournament selected
+- Realistic stats validation based on games played value
+
+## Key Behaviors Summary
+
+1. **Individual Player Focus**: Adjustments are player-specific, not game-specific
+2. **Statistical Integration**: Seamlessly adds to player career totals
+3. **Context Flexibility**: Optional season/tournament association
+4. **Simple UI**: Single form interface for all adjustment creation
+5. **Validation Heavy**: Extensive client-side validation prevents invalid data
+6. **Immediate Updates**: Stats update instantly after adjustment creation
+7. **Delta-Based**: Uses positive increments rather than absolute values
+8. **Interactive Forms**: Real-time validation and dependent field updates

@@ -1,154 +1,438 @@
-# Master Roster Management
+# Master Roster Management (Roster Settings Modal)
 
 ## Overview
-Comprehensive enhancement of the existing roster system with advanced features including search, filtering, bulk operations, player analytics, activity tracking, and intelligent roster insights.
+Full-screen modal interface for managing the master player roster with basic search functionality, individual player CRUD operations, and player statistics access.
 
-## Current App vs New Behavior
+**⚠️ Implementation Note**: This document focuses on UI/UX behavior and business logic. The following technical aspects are NOT covered and must be investigated in the target app version before implementation:
+- Data storage mechanisms (how roster data is persisted and retrieved)
+- State management approach (how roster state is handled across components)
+- Authentication requirements (if user identity affects roster access)
+- Performance considerations for large rosters and search functionality
 
-### Current App
-- Basic player add/edit/delete functionality
-- Simple list view of players
-- Individual player operations only
-- Basic player information (name, nickname, jersey, notes)
+## Business Logic
 
-### With Enhanced Master Roster Management
-- **Advanced search and filtering** with multiple criteria
-- **Bulk operations** for efficient multi-player management
-- **Player tagging system** for custom organization
-- **Activity tracking** showing roster usage and changes
-- **Player analytics** with performance insights
-- **Import/export capabilities** for roster backup and sharing
-- **Intelligent roster insights** and recommendations
+### Modal State Management
+```typescript
+interface RosterSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  availablePlayers: Player[];
+  onRenamePlayer: (playerId: string, playerData: { name: string; nickname: string }) => void;
+  onSetJerseyNumber: (playerId: string, number: string) => void;
+  onSetPlayerNotes: (playerId: string, notes: string) => void;
+  onRemovePlayer: (playerId: string) => void;
+  onAddPlayer: (playerData: { name: string; jerseyNumber: string; notes: string; nickname: string }) => void;
+  isRosterUpdating?: boolean;
+  rosterError?: string | null;
+  onOpenPlayerStats: (playerId: string) => void;
+}
+```
 
-## User Experience
+### Player Data Structure
+```typescript
+interface Player {
+  id: string;
+  name: string;
+  nickname?: string;
+  jerseyNumber?: string;
+  notes?: string;
+  // Additional field properties...
+}
+```
 
-### Enhanced Player Management
-**Advanced Search & Filtering**:
-- **Text Search**: Find players by name, nickname, or notes
-- **Position Filtering**: Filter by goalkeeper, field players, or position roles
-- **Tag Filtering**: Filter by custom tags (injury status, training group, etc.)
-- **Status Filtering**: Active players, benched players, or custom status categories
-- **Combined Filters**: Multiple criteria can be applied simultaneously
+### Search Functionality
+**Search Logic**:
+```typescript
+const filteredPlayers = availablePlayers.filter(player => {
+  if (!searchText) return true;
+  const search = searchText.toLowerCase();
+  return (
+    player.name.toLowerCase().includes(search) ||
+    (player.nickname && player.nickname.toLowerCase().includes(search))
+  );
+});
+```
 
-**Bulk Operations**:
-- **Multi-Select**: Checkbox selection for multiple players
-- **Bulk Edit**: Change multiple players' details at once (jersey numbers, tags, status)
-- **Bulk Delete**: Remove multiple players with confirmation
-- **Bulk Export**: Export selected players to external formats
-- **Bulk Tag Assignment**: Apply tags to multiple players simultaneously
+**Search Behavior**:
+- Case-insensitive text matching
+- Searches both player name and nickname fields
+- Real-time filtering as user types
+- No minimum character requirement
 
-### Player Tagging System
-**Custom Tags**: Create and manage custom labels for player organization
-- **Injury Status**: "Injured", "Recovering", "Available"
-- **Training Groups**: "Advanced", "Beginners", "Goalkeepers"
-- **Player Roles**: "Captain", "Vice Captain", "Team Leader"
-- **Custom Categories**: User-defined tags for specific team needs
+### Edit State Management
+- **Single Edit Mode**: Only one player can be edited at a time
+- **Edit Lock**: Adding new players disabled during edit mode
+- **Form Validation**: Player name cannot be empty
+- **Change Detection**: Only modified fields trigger update calls
 
-**Tag Management**:
-- **Visual Tag Display**: Color-coded tags visible in player list
-- **Tag Creation**: Add new tags with custom names and colors
-- **Tag Assignment**: Easy drag-and-drop or checkbox assignment
-- **Tag Filtering**: Quick filtering by any tag category
+## UI/UX Implementation Details
 
-### Player Activity Tracking
-**Activity History**: Comprehensive log of player-related actions
-- **Creation Events**: When players were added to roster
-- **Modification Events**: Changes to player details over time
-- **Game Participation**: Automatic tracking of games played
-- **Roster Changes**: History of additions, removals, and modifications
+### Modal Design Foundation
 
-**Activity Insights**:
-- **Most Active Players**: Who participates in most games
-- **Recent Changes**: Timeline of recent roster modifications
-- **Usage Patterns**: Which players are selected most frequently
-- **Roster Growth**: Timeline showing how roster has developed
+**Full-Screen Modal Container**:
+```css
+position: fixed;
+inset: 0;
+background: rgba(0, 0, 0, 0.7);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 60;
+font-family: theme(fontFamily.display);
+```
 
-### Player Analytics
-**Individual Player Stats**:
-- **Games Played**: Total appearances across all games
-- **Position Analysis**: Most common positions played
-- **Performance Trends**: Goals, assists, and other tracked metrics
-- **Availability Patterns**: Regular availability vs occasional participation
+**Content Container**:
+```css
+background: #1e293b; /* slate-800 */
+border-radius: 0;
+box-shadow: theme(boxShadow.xl);
+border: none;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+height: 100%;
+width: 100%;
+position: relative;
+```
 
-**Roster Analytics**:
-- **Team Composition**: Position distribution and balance analysis
-- **Activity Distribution**: Even participation vs concentrated usage
-- **Roster Health**: Injury status and availability overview
-- **Growth Recommendations**: Suggestions for roster development
+**Background Effects**:
+- Noise texture overlay (`bg-noise-texture`)
+- Indigo soft-light blend (`bg-indigo-600/10 mix-blend-soft-light`)
+- Sky gradient from top (`bg-gradient-to-b from-sky-400/10 via-transparent to-transparent`)
+- Blurred corner glows (top sky, bottom indigo)
 
-### Import/Export Features
-**Export Options**:
-- **PDF Roster**: Printable team roster with photos and details
-- **CSV Data**: Spreadsheet-compatible player data
-- **Backup Format**: Complete roster data for app restoration
-- **Filtered Exports**: Export only selected or filtered players
+### Header Section
 
-**Import Capabilities**:
-- **CSV Import**: Bulk player addition from spreadsheet data
-- **Backup Restoration**: Restore complete roster from previous export
-- **Template Support**: Pre-formatted templates for common roster formats
-- **Data Validation**: Import validation prevents duplicate or invalid data
+**Title Area**:
+```css
+display: flex;
+justify-content: center;
+align-items: center;
+padding-top: 2.5rem; /* pt-10 */
+padding-bottom: 1rem; /* pb-4 */
+backdrop-filter: blur(4px);
+background: rgba(15, 23, 42, 0.2); /* bg-slate-900/20 */
+```
 
-## UI Elements
+**Title Styling**:
+```css
+font-size: 1.875rem; /* text-3xl */
+font-weight: 700; /* font-bold */
+color: #fbbf24; /* text-yellow-400 */
+letter-spacing: 0.025em; /* tracking-wide */
+filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.04)); /* drop-shadow-lg */
+```
 
-### Enhanced Player List
-**Advanced View Options**:
-- **Grid View**: Player cards with photos and key information
-- **List View**: Compact rows with sortable columns
-- **Detail View**: Expanded information including tags and activity
-- **Quick Edit**: Inline editing for common fields
+**Fixed Header Section**:
+```css
+padding: 0.25rem 1.5rem 1rem; /* px-6 pt-1 pb-4 */
+backdrop-filter: blur(4px);
+background: rgba(15, 23, 42, 0.2); /* bg-slate-900/20 */
+```
 
-**Search Interface**:
-- **Search Bar**: Prominent search with real-time filtering
-- **Filter Sidebar**: Collapsible panel with all filter options
-- **Active Filter Display**: Clear indication of applied filters
-- **Save Filter Sets**: Save commonly used filter combinations
+### Player Counter
 
-### Bulk Operations Toolbar
-**Selection Tools**:
-- **Select All**: Quick selection of all visible players
-- **Select None**: Clear all selections
-- **Invert Selection**: Flip selection state of all players
-- **Select by Filter**: Select all players matching current filters
+**Counter Display**:
+- Shows total player count with highlighting
+- Format: "[XX] Total Players" where XX is highlighted in yellow
+- Always visible in fixed header area
 
-**Bulk Action Buttons**:
-- **Edit Selected**: Multi-player editing interface
-- **Delete Selected**: Bulk deletion with detailed confirmation
-- **Export Selected**: Export options for selected players only
-- **Tag Selected**: Bulk tag assignment interface
+**Counter Styling**:
+```css
+margin-bottom: 1.25rem; /* mb-5 */
+text-align: center;
+font-size: 0.875rem; /* text-sm */
+color: #cbd5e1; /* text-slate-300 */
 
-### Player Tags Interface
-**Tag Display**:
-- **Player Cards**: Tags shown as colored badges
-- **Tag Legend**: Color-coded legend showing all available tags
-- **Tag Counts**: Number of players assigned to each tag
-- **Quick Filters**: One-click filtering by tag category
+/* Count number styling */
+.count {
+  color: #fbbf24; /* text-yellow-400 */
+  font-weight: 600; /* font-semibold */
+}
+```
 
-**Tag Management**:
-- **Tag Creator**: Modal for creating new tags with colors
-- **Tag Editor**: Modify existing tag names and appearances
-- **Tag Assignment**: Drag-and-drop or checkbox interfaces
-- **Tag Statistics**: Usage analytics for each tag
+### Add Player Interface
 
-### Analytics Dashboard
-**Overview Cards**:
-- **Total Players**: Count with growth trend
-- **Active Players**: Recently used players count
-- **Position Distribution**: Visual breakdown of player positions
-- **Recent Activity**: Timeline of recent roster changes
+**Add Player Button**:
+```css
+width: 100%;
+padding: 0.5rem 1rem; /* px-4 py-2 */
+border-radius: 0.375rem; /* rounded-md */
+font-size: 0.875rem; /* text-sm */
+font-weight: 500; /* font-medium */
+transition: colors 0.15s ease;
+box-shadow: theme(boxShadow.sm);
+background: linear-gradient(to bottom, #6366f1, #4f46e5); /* from-indigo-500 to-indigo-600 */
+color: white;
 
-**Detailed Analytics**:
-- **Player Usage Charts**: Visual representation of participation
-- **Roster Balance**: Position and skill distribution analysis
-- **Activity Timeline**: Historical view of roster development
-- **Export Analytics**: Data export options for deeper analysis
+&:hover {
+  background: linear-gradient(to bottom, #4f46e5, #4338ca); /* hover:from-indigo-600 hover:to-indigo-700 */
+}
 
-## Key Behaviors
-- **Non-Destructive Enhancement**: All existing roster functionality remains unchanged
-- **Progressive Disclosure**: Advanced features available but don't overwhelm basic users
-- **Intelligent Defaults**: Smart suggestions based on existing roster data
-- **Efficient Bulk Operations**: Multi-player operations significantly reduce management time
-- **Comprehensive Search**: Find players quickly regardless of roster size
-- **Flexible Organization**: Custom tagging adapts to any team's organizational needs
-- **Data Preservation**: All activity tracking and analytics preserve historical data
-- **Export Flexibility**: Multiple format options for different use cases
+&:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+```
+
+**Add Player Form**:
+- Appears below search field when "Add Player" is clicked
+- Full-width card layout with form fields
+- Responsive grid layout (1 column on mobile, 2 columns on larger screens)
+
+**Form Field Structure**:
+```
+┌─────────────────────────────┐
+│ [Player Name]  [Nickname]   │ <- Grid: 1 col mobile, 2 col desktop
+│ [Jersey #]                  │ <- Small width, center-aligned
+│ [Notes textarea]            │ <- Full width, 3 rows
+│           [Cancel] [Save]   │ <- Right-aligned buttons
+└─────────────────────────────┘
+```
+
+### Search Interface
+
+**Search Input**:
+```css
+width: 100%;
+background: #374151; /* bg-slate-700 */
+border: 1px solid #4b5563; /* border-slate-600 */
+border-radius: 0.375rem; /* rounded-md */
+box-shadow: theme(boxShadow.sm);
+padding: 0.5rem 0.75rem; /* py-2 px-3 */
+color: white;
+font-size: 0.875rem; /* text-sm */
+
+&:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px theme(colors.indigo.500);
+}
+```
+
+**Search Behavior**:
+- Real-time filtering with no debouncing
+- Placeholder text: "Search players..."
+- Focus management prevents interference with add player form
+- Search disabled when adding new player
+
+### Player List Interface
+
+**Scrollable Content Area**:
+```css
+flex: 1;
+overflow-y: auto;
+min-height: 0;
+```
+
+**Player Card Layout**:
+Each player is displayed in a card with the following structure:
+```
+┌─────────────────────────────┐
+│ Player Name (Nickname)      │ <- Title with optional nickname
+│ Jersey: #XX                 │ <- Jersey number if set
+│ Notes: Player notes...      │ <- Notes if set
+│ [Edit] [Stats] [Delete]     │ <- Action buttons
+└─────────────────────────────┘
+```
+
+**Player Card Styling**:
+```css
+background: rgba(15, 23, 42, 0.7); /* bg-slate-900/70 */
+padding: 1rem; /* p-4 */
+border-radius: 0.5rem; /* rounded-lg */
+border: 1px solid #374151; /* border-slate-700 */
+box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); /* shadow-inner */
+margin-bottom: 0.75rem; /* space between cards */
+```
+
+### Edit Mode Interface
+
+**Edit Form Fields**:
+When editing, the player card transforms into an edit form with:
+- Player name input (required)
+- Nickname input (optional)
+- Jersey number input (3 character limit, center-aligned)
+- Notes textarea (3 rows, non-resizable)
+
+**Edit Form Styling**:
+- Same card styling as add player form
+- Form validates on save (name required)
+- Auto-scrolls edited player into view
+- Save/Cancel buttons at bottom right
+
+**Input Styling** (shared across forms):
+```css
+display: block;
+width: 100%;
+background: #374151; /* bg-slate-700 */
+border: 1px solid #4b5563; /* border-slate-600 */
+border-radius: 0.375rem; /* rounded-md */
+box-shadow: theme(boxShadow.sm);
+padding: 0.5rem 0.75rem; /* py-2 px-3 */
+color: white;
+font-size: 0.875rem; /* text-sm */
+
+&:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px theme(colors.indigo.500);
+}
+```
+
+### Button System
+
+**Primary Button Style**:
+```css
+padding: 0.5rem 1rem; /* px-4 py-2 */
+border-radius: 0.375rem; /* rounded-md */
+font-size: 0.875rem; /* text-sm */
+font-weight: 500; /* font-medium */
+transition: colors 0.15s ease;
+box-shadow: theme(boxShadow.sm);
+background: linear-gradient(to bottom, #6366f1, #4f46e5); /* from-indigo-500 to-indigo-600 */
+color: white;
+```
+
+**Secondary Button Style**:
+```css
+padding: 0.5rem 1rem; /* px-4 py-2 */
+border-radius: 0.375rem; /* rounded-md */
+font-size: 0.875rem; /* text-sm */
+font-weight: 500; /* font-medium */
+transition: colors 0.15s ease;
+box-shadow: theme(boxShadow.sm);
+background: linear-gradient(to bottom, #4b5563, #374151); /* from-slate-600 to-slate-700 */
+color: #e2e8f0; /* text-slate-200 */
+```
+
+**Icon Button Style**:
+```css
+padding: 0.375rem; /* p-1.5 */
+border-radius: 0.375rem; /* rounded-md */
+transition: colors 0.15s ease;
+
+&:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+```
+
+### Action Button Layout
+
+Each player card has three action buttons:
+1. **Edit**: Opens inline edit form (pencil icon)
+2. **Stats**: Opens player statistics modal (chart bar icon)  
+3. **Delete**: Removes player with confirmation (trash icon)
+
+**Button Container**:
+```css
+display: flex;
+justify-content: flex-end;
+gap: 0.75rem; /* gap-3 */
+padding-top: 0.5rem; /* pt-2 */
+```
+
+## Form Validation and Error Handling
+
+### Validation Rules
+1. **Player Name**: Required, cannot be empty after trim
+2. **Jersey Number**: Optional, 3 character maximum
+3. **Nickname**: Optional field
+4. **Notes**: Optional field
+
+### Error Display
+- Validation errors shown via browser alert dialogs
+- Uses translated error messages
+- Form prevents submission until validation passes
+
+### Loading States
+- Buttons disabled during roster updates (`isRosterUpdating` prop)
+- Visual indication of disabled state (reduced opacity)
+- Prevents concurrent operations
+
+## Responsive Design
+
+### Layout Adaptations
+**Mobile (< 640px)**:
+- Single column form layouts
+- Full-width buttons and inputs
+- Stacked action buttons
+
+**Desktop (≥ 640px)**:
+- Two-column grid for name/nickname fields
+- Side-by-side form elements where appropriate
+- Horizontal action button layout
+
+### Touch Interactions
+- Large touch targets for mobile users
+- Proper focus management for form fields
+- Scroll behavior optimization for modal content
+
+## Internationalization
+
+### Translation Keys Used
+**Modal Structure**:
+- `rosterSettingsModal.title` (default: "Manage Roster")
+- `rosterSettingsModal.totalPlayersShort` (default: "Total Players")
+- `rosterSettingsModal.addPlayerButton` (default: "Add Player")
+- `rosterSettingsModal.searchPlaceholder` (default: "Search players...")
+
+**Form Fields**:
+- `rosterSettingsModal.playerNamePlaceholder` (default: "Player Name")
+- `rosterSettingsModal.nicknamePlaceholder` (default: "Nickname (Optional)")
+- `rosterSettingsModal.jerseyHeader` (default: "#")
+- `rosterSettingsModal.notesPlaceholder` (default: "Player notes...")
+
+**Validation Messages**:
+- `rosterSettingsModal.nameRequired` (default: "Player name cannot be empty.")
+
+**Action Labels**: Standard labels for Edit, Save, Cancel, Delete actions
+
+### Language Support
+- Complete English and Finnish support
+- Form validation messages fully translatable
+- Consistent terminology with main app interface
+
+## Integration Points
+
+### Modal System Integration
+- Consistent z-index layering (`z-[60]`)
+- Standard modal backdrop behavior
+- Proper focus management and accessibility
+
+### Player Statistics Integration
+- Direct connection to player stats modal
+- Passes player data for detailed analytics
+- Maintains context between roster and stats views
+
+### Roster Data Management
+- Integrates with master roster utilities
+- Handles all CRUD operations through prop callbacks
+- Maintains data consistency across app components
+
+## Technical Considerations
+
+### Performance
+- Efficient search filtering with simple string matching
+- Minimal re-renders through proper state management
+- Optimized scroll behavior for large rosters
+
+### User Experience
+- Intuitive single-edit-mode prevents confusion
+- Clear visual feedback for all actions
+- Smooth transitions between view and edit modes
+
+### Data Integrity
+- Form validation prevents invalid data entry
+- Proper error handling for roster operations
+- Consistent state management across operations
+
+## Key Behaviors Summary
+
+1. **Simple CRUD Operations**: Add, edit, delete individual players with basic form interface
+2. **Basic Search**: Real-time text search across name and nickname fields
+3. **Single Edit Mode**: Only one player editable at a time to prevent confusion
+4. **Visual Consistency**: Matches app design system with slate/indigo color scheme
+5. **Mobile Optimized**: Full-screen modal with responsive form layouts
+6. **Form Validation**: Required field validation with translated error messages
+7. **Statistics Integration**: Direct access to detailed player statistics
+8. **Loading States**: Visual feedback during roster update operations

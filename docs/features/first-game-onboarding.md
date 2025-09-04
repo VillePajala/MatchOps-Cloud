@@ -1,111 +1,273 @@
-# First Game Onboarding
+# First Game Onboarding (Center Overlay)
 
 ## Overview
-Comprehensive three-layer guided onboarding system that helps new users create their first real game with confidence and understanding.
+**⚠️ PLANNED FEATURE**: This center overlay system is referenced in code comments but not currently implemented. This document describes the intended behavior for future implementation.
 
-## Current App vs New Behavior
+Simple center overlay guidance system that should appear on the soccer field to help first-time users understand next steps for game creation.
 
-### Current App
-- New users face full complexity immediately
-- No guided introduction to game creation workflow
-- Users must discover features through trial and error
+**⚠️ Implementation Note**: This document focuses on UI/UX behavior and business logic. The following technical aspects are NOT covered and must be investigated in the target app version before implementation:
+- Data storage mechanisms (how onboarding progress is tracked and persisted)
+- State management approach (how overlay visibility state is handled)
+- Authentication requirements (if user identity affects onboarding behavior)
+- Performance considerations for overlay rendering and field interaction
 
-### With First Game Onboarding
-- **Three-layer guidance system** provides progressive support
-- **Contextual help** appears automatically when needed
-- **One-time experience** that doesn't repeat after completion
+## Business Logic
 
-## User Experience
+### Overlay Trigger Condition
+The center overlay should appear based on user data state:
+```
+showOverlay = isFirstTimeUser && (user clicked "Get Started" from start screen)
+```
 
-### Layer 1: Center Overlay
-**Appearance**: Welcome message displayed over the soccer field workspace
-**Content**: 
-- Friendly welcome text explaining this is their first game
-- Clear call-to-action encouraging them to start
-- Professional styling that doesn't obstruct field view
+**Data Requirements**:
+- `hasPlayers`: Boolean indicating if any players exist in roster
+- `hasSavedGames`: Boolean indicating if any games have been saved
+- `isFirstTimeUser`: Derived boolean (`!hasPlayers || !hasSavedGames`)
+- Navigation context (when user navigates from start screen to main app)
 
-**Triggers**: 
-- Appears when user creates their first real game (not demo/tutorial)
-- Only shows once per user
-- Dismisses automatically when user begins interacting
+### Content Adaptation Logic
+The overlay content adapts based on roster state:
 
-### Layer 2: Warning Banner
-**Appearance**: Persistent top banner during temporary workspace usage
-**Content**:
-- Explains they're in a temporary game workspace
-- Encourages completing roster setup for full experience
-- Option to dismiss or navigate to roster setup
+**No Players State** (`!hasPlayers`):
+- Title: "Ready to get started?"
+- Description: "First, add players so you can create your first team and match."
+- Primary Action: "Set Up Team Roster"
 
-**Behavior**:
-- Shows when user is using temporary/demo mode
-- Remains visible until user completes basic setup
-- Non-intrusive but informative
+**Has Players State** (`hasPlayers`):
+- Title: "Ready to create your first match!"
+- Description: "If you'd like, you can first create your first team, tournament, or season."
+- Primary Action: "Create Your First Match"
+- Secondary Actions: "Create Season/Tournament First", "Create First Team", "Manage Teams", etc.
 
-### Layer 3: Step-by-Step Tutorial
-**Appearance**: Interactive guide activated by user choice
-**Content**: 7-step comprehensive walkthrough covering:
+### Completion Tracking
+- One-time experience: `hasSeenAppGuide` flag prevents repeated display
+- Persists across app sessions
+- Can be manually reset for testing purposes
 
-1. **Player Selection** - How to use the top player bar
-2. **The Field** - Placing players, moving them, tactical interactions  
-3. **Tactical View** - Formation setup, drawing tools
-4. **Quick Actions** - Bottom control bar functions
-5. **Game Management** - Timer controls, settings, period management
-6. **Data & Organization** - Export, teams, seasons integration
-7. **Tips & Best Practices** - Before and during game advice
+## UI/UX Implementation Details
 
-**UI Features**:
-- **Modal-based presentation** with professional styling
-- **Visual icons** that match actual UI elements
-- **Color-coded instructions** for different action types
-- **Sequential progression** with next/previous navigation
-- **Skip option** for users who want to explore independently
+### Overlay Positioning
+**Container**:
+- Positioned as centered overlay on soccer field
+- Does not block field interaction completely
+- Semi-transparent background allows field visibility
 
-### Dynamic Adaptation
-**Smart Content**: Tutorial adapts based on existing user data
-- If user has teams: Shows team-specific workflows
-- If user has seasons: Demonstrates season/tournament association
-- If minimal data: Focuses on basic game creation
+**Z-Index**: Above field canvas but below modal dialogs (suggested: `z-30`)
 
-**Button Behavior**: Call-to-action buttons change based on setup state
-- "Create Your First Team" (when no teams exist)
-- "Start Your Season" (when teams exist but no seasons)
-- "Play Your First Game" (when basic setup complete)
+### Visual Design
 
-## UI Elements
+**Overlay Container**:
+```css
+/* Centered positioning over field */
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
 
-### Overlay Design
-- **Semi-transparent background** that doesn't block field interaction
-- **Centered messaging** with clear typography
-- **Subtle animations** that draw attention without distraction
-- **Easy dismissal** through click-outside or explicit close action
+/* Semi-transparent background */
+background: rgba(0, 0, 0, 0.8);
+backdrop-filter: blur(4px);
 
-### Tutorial Navigation
-- **Progress indicators** showing current step position
-- **Consistent styling** matching app's design language
-- **Responsive layout** working on different screen sizes
-- **Keyboard navigation** support for accessibility
+/* Rounded container with border */
+border-radius: 12px;
+border: 1px solid rgba(255, 255, 255, 0.1);
 
-### Banner Styling
-- **Non-obtrusive positioning** at top of interface
-- **Consistent with app alerts** but distinct as educational content
-- **Action buttons** for quick navigation to setup areas
-- **Dismissal options** for users who want to proceed without guidance
+/* Responsive sizing */
+max-width: 24rem; /* max-w-96 */
+margin: 1rem; /* mx-4 */
+padding: 1.5rem; /* p-6 */
+```
 
-## Completion Tracking
+**Typography**:
+- Title: Large, bold heading
+- Description: Medium body text with good contrast
+- Actions: Button styling consistent with app design system
 
-### One-Time Experience
-- System remembers when user has seen each layer
-- Onboarding doesn't repeat on subsequent game creations
-- User can manually access tutorial later through help system
+### Content Structure
 
-### Progress Recognition
-- App detects when user completes key setup milestones
-- Onboarding layers automatically phase out as user advances
-- Smooth transition from guided to independent usage
+**No Players State Layout**:
+```
+┌─────────────────────────────┐
+│  Ready to get started?      │  <- Title
+│                             │
+│  First, add players so you  │  <- Description
+│  can create your first team │
+│  and match.                 │
+│                             │
+│  [Set Up Team Roster]      │  <- Primary Action
+└─────────────────────────────┘
+```
 
-## Key Behaviors
-- **Just-in-time Help**: Appears exactly when users need guidance
-- **Non-blocking**: Users can dismiss and explore independently at any time
-- **Contextual**: Content adapts to user's current app state and data
-- **Professional**: High-quality presentation that builds confidence in the app
-- **Integrated**: Seamlessly connects with existing help system and app features
+**Has Players State Layout**:
+```
+┌─────────────────────────────┐
+│  Ready to create your first │  <- Title
+│  match!                     │
+│                             │
+│  If you'd like, you can     │  <- Description
+│  first create your first    │
+│  team, tournament, or       │
+│  season.                    │
+│                             │
+│  [Create Your First Match]  │  <- Primary Action
+│  [Create Season/Tournament  │  <- Secondary Actions
+│   First]                    │
+│  [Create First Team]        │
+│  [Manage Teams]             │
+│  [Manage Seasons &          │
+│   Tournaments]              │
+└─────────────────────────────┘
+```
+
+### Button Specifications
+
+**Primary Action Button**:
+```css
+width: 100%;
+padding: 0.75rem 1rem; /* py-3 px-4 */
+background: linear-gradient(to right, #4f46e5, #7c3aed); /* indigo-600 to violet-700 */
+color: white;
+border-radius: 0.5rem; /* rounded-lg */
+font-weight: 600; /* font-semibold */
+box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); /* shadow-lg */
+
+/* Hover state */
+&:hover {
+  background: linear-gradient(to right, #4338ca, #6d28d9); /* indigo-500 to violet-600 */
+}
+
+/* Focus state */
+&:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #4f46e5; /* focus:ring-2 focus:ring-indigo-500 */
+}
+```
+
+**Secondary Action Buttons**:
+```css
+width: 100%;
+padding: 0.5rem 0.75rem; /* py-2 px-3 */
+background: rgba(51, 65, 85, 0.6); /* bg-slate-700/60 */
+color: #cbd5e1; /* text-slate-300 */
+border: 1px solid #475569; /* border-slate-600 */
+border-radius: 0.375rem; /* rounded-md */
+font-size: 0.875rem; /* text-sm */
+margin-top: 0.5rem; /* mt-2 */
+
+/* Hover state */
+&:hover {
+  background: rgba(71, 85, 105, 0.6); /* hover:bg-slate-600/60 */
+}
+```
+
+### User Interaction Behavior
+
+**Action Routing**:
+- **Set Up Team Roster**: Opens roster management modal
+- **Create Your First Match**: Opens new game setup modal
+- **Create Season/Tournament First**: Opens season/tournament management modal
+- **Create First Team**: Opens team creation modal
+- **Manage Teams**: Opens team management modal
+- **Manage Seasons & Tournaments**: Opens season/tournament modal
+
+**Overlay Dismissal**:
+- Any action button click hides overlay and sets `hasSeenAppGuide = true`
+- Click outside overlay area dismisses without setting completion flag
+- No explicit close button (actions serve as completion mechanism)
+
+### Responsive Design
+
+**Mobile Adaptation**:
+```css
+/* Mobile screens (< 640px) */
+@media (max-width: 640px) {
+  max-width: calc(100vw - 2rem); /* Account for margins */
+  padding: 1rem; /* Reduced padding */
+  font-size: 0.875rem; /* Smaller text */
+}
+
+/* Tablet and desktop */
+@media (min-width: 640px) {
+  max-width: 24rem; /* max-w-96 */
+  padding: 1.5rem;
+}
+```
+
+**Button Stack**:
+- Buttons stack vertically on all screen sizes
+- Full-width buttons for easy touch interaction
+- Adequate spacing between action buttons
+
+## Internationalization
+
+### Translation Keys Used
+
+**Common Keys**:
+- `firstGame.title` (default: "Ready to create your first match!")
+- `firstGame.titleNoPlayers` (default: "Ready to get started?")
+- `firstGame.desc` (default: "If you'd like, you can first create your first team, tournament, or season.")
+- `firstGame.descNoPlayers` (default: "First, add players so you can create your first team and match.")
+
+**Action Keys**:
+- `firstGame.setupRoster` (default: "Set Up Team Roster")
+- `firstGame.createGame` (default: "Create Your First Match")
+- `firstGame.createSeasonFirst` (default: "Create Season/Tournament First")
+- `firstGame.createTeam` (default: "Create First Team")
+- `firstGame.manageTeams` (default: "Manage Teams")
+- `firstGame.manageSeasonsAndTournaments` (default: "Manage Seasons & Tournaments")
+
+**Additional Context Keys**:
+- `firstGame.rosterFirst` (default: "Add players first, then create your game")
+- `firstGame.orExperiment` (default: "Or experiment first:")
+- `firstGame.experimentOption` (default: "Use temporary workspace for testing")
+- `firstGame.workspaceWarning` (default: "Temporary workspace - changes won't be saved")
+- `firstGame.createRealGame` (default: "Create real game")
+
+### Language Support
+- All content fully translatable
+- Text length considerations for different languages
+- RTL language support through CSS logical properties
+
+## Integration Points
+
+### Modal System Integration
+- Overlay actions trigger existing modal systems
+- Consistent with app's modal management patterns
+- Proper z-index layering (overlay < modals)
+
+### Navigation Integration
+- Actions route to appropriate app sections
+- Maintains navigation state and history
+- Integrates with existing routing patterns
+
+### Settings Integration
+- Uses `hasSeenAppGuide` setting for completion tracking
+- Integrates with app settings persistence layer
+- Can be reset via settings for development/testing
+
+## Technical Considerations
+
+### Performance
+- Overlay only renders when needed (conditional rendering)
+- Minimal impact on field canvas performance
+- Efficient state management for visibility
+
+### Accessibility
+- Keyboard navigation support for all buttons
+- Screen reader compatible text and roles
+- Focus management when overlay appears/disappears
+
+### Field Interaction
+- Overlay allows limited field interaction underneath
+- Semi-transparent design maintains field context
+- Does not interfere with essential field functionality
+
+## Key Behaviors Summary
+
+1. **Contextual Appearance**: Shows only for first-time users on field access
+2. **Adaptive Content**: Changes based on current roster state
+3. **One-Time Experience**: Permanently dismissed after any action
+4. **Non-Blocking**: Allows some field interaction while visible
+5. **Action-Oriented**: Every button leads to concrete next steps
+6. **Progressive Guidance**: Adapts to user's current setup progress
+7. **Mobile-Friendly**: Optimized for touch interaction and small screens

@@ -1,112 +1,321 @@
-# Robust Alert System
+# Robust Alert System (Native Browser Dialogs)
 
 ## Overview
-Consistent user guidance system that provides reliable alerts across all roster and game operations, preventing invalid states and destructive actions.
+Consistent user guidance system using native browser alerts (`window.alert()`) and confirmations (`window.confirm()`) for validation, error handling, and destructive action confirmation across the application.
 
-## Current App vs New Behavior
+**⚠️ Implementation Note**: This document focuses on UI/UX behavior and business logic. The following technical aspects are NOT covered and must be investigated in the target app version before implementation:
+- Data storage mechanisms (how validation state is tracked)
+- State management approach (how alert responses affect app state)
+- Authentication requirements (if user identity affects alert behavior)
+- Performance considerations for alert timing and user experience
 
-### Current App
-- Inconsistent alert patterns across different operations
-- Users can perform invalid actions that create confusing states
-- Limited guidance for complex operations
+## Business Logic
 
-### With Robust Alert System
-- **Consistent alert patterns** across all app operations
-- **Preventive guards** that stop invalid actions before they occur
-- **Progressive confirmation** for destructive operations
-- **Cross-platform reliability** using native browser alerts
+### Alert System Architecture
+The app uses native browser dialogs for maximum compatibility and consistency:
 
-## User Experience
+**Alert Types Used**:
+1. **`window.alert()`**: For informational messages, validation errors, and operation results
+2. **`window.confirm()`**: For yes/no confirmations, especially destructive actions
 
-### Consistent Alert Patterns
-**Native Browser Alerts**: Uses `window.confirm()` for maximum compatibility
-- Works identically on all devices and browsers
-- No dependency on external alert libraries
+**Benefits of Native Dialogs**:
+- Cross-platform consistency
+- No additional library dependencies
 - Reliable user interaction patterns
+- Automatic focus management and accessibility
 
-**Standardized Messaging**: Consistent language across all contexts
-- Clear action descriptions: "Delete this player permanently?"
-- Impact explanations: "This will remove the player from 3 saved games"
-- Next-step guidance: "You can add them back later from the roster"
+### Alert Usage Patterns
 
-### Preventive Guard Conditions
-**Roster Operations**:
-- Cannot create games with empty roster
-- Cannot delete players currently in active games
-- Cannot remove last goalkeeper without confirmation
+**Form Validation**:
+```typescript
+// Player name validation
+if (!trimmedName) {
+  alert(t('rosterSettingsModal.nameRequired', 'Player name cannot be empty.') || 'Player name cannot be empty.');
+  return;
+}
+```
 
-**Game Operations**:
-- Cannot start games without minimum players
-- Cannot delete seasons that contain games
-- Cannot archive teams with ongoing seasons
+**Destructive Action Confirmation**:
+```typescript
+// Delete confirmation
+if (window.confirm(t('gameStatsModal.confirmDeleteEvent', 'Are you sure you want to delete this event? This cannot be undone.'))) {
+  // Proceed with deletion
+}
+```
 
-**Alert Examples**:
-- "You need at least 1 player to create a game. Add players now?"
-- "This player is in 2 saved games. Remove them anyway?"
-- "Deleting this team will affect 5 games. Continue?"
+**Operation Status Feedback**:
+```typescript
+// Success/failure notifications
+alert(i18n.t("fullBackup.exportSuccess"));
+alert(i18n.t("fullBackup.exportError"));
+```
 
-### Progressive Confirmation
-**Single Confirmation**: Simple operations (add player, edit name)
-**Double Confirmation**: Destructive operations (delete team, clear all data)
-**Impact Warnings**: Complex operations that affect multiple areas
+## UI/UX Implementation Details
 
-**Example Flow - Delete Team**:
-1. First alert: "Delete team 'Rangers'? This will affect 5 games and 12 players."
-2. Second alert: "Are you sure? This cannot be undone."
-3. Success confirmation: "Team 'Rangers' has been deleted."
+### Form Validation Alerts
 
-### Multi-Language Support
-**English/Finnish**: All alert messages available in both languages
-- Contextual translations that preserve meaning
-- Consistent terminology across all operations
-- Fallback to English if translation missing
+**Player Management Validation**:
+- **Empty Name**: `rosterSettingsModal.nameRequired` - "Player name cannot be empty."
+- **Team Name Required**: `playerStats.teamRequired` - "Team name is required."
+- **Opponent Required**: `playerStats.opponentRequired` - "Opponent name is required."
+- **Season Required**: `playerStats.seasonRequired` - "Please create a season first."
+- **Invalid Stats**: `playerStats.negativeStatsError` - "Stats cannot be negative."
+- **Empty Stats Error**: `playerStats.emptyStatsError` - "Please enter at least one statistic."
 
-**Example Translations**:
-- EN: "Delete this player permanently?"
-- FI: "Poista tämä pelaaja pysyvästi?"
+**Game Data Validation**:
+- **Invalid Time Format**: `gameStatsModal.invalidTimeFormat` - "Invalid time format. MM:SS"
+- **Scorer Required**: `gameStatsModal.scorerRequired` - "Scorer must be selected."
 
-## UI Elements
+### Confirmation Dialog Patterns
 
-### Alert Types
-**Confirmation Alerts**: Yes/No decisions for user actions
-**Warning Alerts**: Information about potential consequences
-**Error Prevention**: Blocks that explain why action cannot be performed
-**Success Confirmations**: Positive feedback when operations complete
+**Delete Operations**:
+```typescript
+// Player deletion
+if (window.confirm(t('rosterSettingsModal.confirmDeletePlayer', 'Are you sure you want to remove this player?'))) {
+  onRemovePlayer(player.id);
+}
 
-### Visual Consistency
-**Native Styling**: Uses browser's native alert styling for familiarity
-**Consistent Icons**: When custom alerts are used, consistent icon patterns
-**Color Coding**: Red for destructive, yellow for warning, blue for informational
+// Game deletion
+if (window.confirm(t('loadGameModal.deleteConfirm', 'Are you sure you want to delete the saved game "{gameName}"? This action cannot be undone.'))) {
+  // Proceed with deletion
+}
 
-### Context-Aware Messaging
-**Operation-Specific**: Messages tailored to specific user action
-**Data-Aware**: Includes relevant counts and names from user's actual data
-**Solution-Oriented**: Suggests next steps when operations are blocked
+// Event deletion
+if (window.confirm(t('gameStatsModal.confirmDeleteEvent', 'Are you sure you want to delete this event? This cannot be undone.'))) {
+  // Delete event
+}
+```
 
-## Guard Conditions
+**Data Management Operations**:
+```typescript
+// Hard reset confirmation
+if (window.confirm(t('controlBar.hardResetConfirmation', 'Are you sure you want to completely reset the application? All saved data (players, stats, positions) will be permanently lost.'))) {
+  // Reset application
+}
 
-### Roster Guards
-- **Empty Roster**: Prevents game creation, suggests roster setup
-- **Goalkeeper Rules**: Maintains exactly one goalkeeper per roster
-- **Player Dependencies**: Prevents deletion of players in active games
-- **Duplicate Prevention**: Stops duplicate player names
+// Backup restore confirmation
+if (!window.confirm(i18n.t("fullBackup.confirmRestore"))) {
+  return; // User cancelled
+}
+```
 
-### Game Guards  
-- **Minimum Players**: Ensures sufficient players for game creation
-- **Time Conflicts**: Warns about overlapping game schedules
-- **Save Conflicts**: Prevents overwriting existing saves without confirmation
-- **Export Validation**: Ensures data integrity before export operations
+**Smart Roster Detection**:
+```typescript
+// No players warning with roster redirect
+const shouldOpenRoster = window.confirm(
+  t('controlBar.noPlayersForNewGame', 'You need at least one player in your roster to create a game. Would you like to add players now?')
+);
+if (shouldOpenRoster) {
+  // Open roster management
+}
 
-### Team/Season Guards
-- **Dependency Checks**: Prevents deletion of entities with related data
-- **Name Validation**: Ensures unique names within categories
-- **Archive Safety**: Warns before archiving entities with active references
-- **Bulk Operation Limits**: Prevents accidentally large-scale changes
+// New game confirmation when unsaved changes exist
+if (window.confirm(t('controlBar.startNewMatchConfirmation', 'Are you sure you want to start a new match? Any unsaved progress will be lost.'))) {
+  // Start new match
+}
+```
 
-## Key Behaviors
-- **Proactive Prevention**: Stops problems before they occur rather than cleaning up afterward
-- **Clear Communication**: Users always understand what will happen and why
-- **Consistent Experience**: Same alert patterns apply across all app features
-- **Recovery Guidance**: When operations are blocked, users are guided to solutions
-- **Cross-Platform Reliability**: Works identically on all devices and operating systems
-- **Intelligent Defaults**: Most common user choice is pre-selected in confirmations
+### Success and Error Feedback
+
+**Backup/Restore Operations**:
+- **Export Success**: `fullBackup.exportSuccess`
+- **Export Error**: `fullBackup.exportError` 
+- **Restore Success**: `fullBackup.restoreSuccess`
+- **Restore Error**: `fullBackup.restoreError`
+- **Restore Key Error**: `fullBackup.restoreKeyError`
+
+**File Operation Feedback**:
+- Delayed success messages for file download operations
+- Error messages with specific error details
+- Context-aware messaging based on operation type
+
+## Alert Content Structure
+
+### Validation Error Messages
+**Format**: Direct, actionable feedback
+```
+❌ "Player name cannot be empty."
+❌ "Invalid time format. MM:SS"
+❌ "Scorer must be selected."
+```
+
+### Confirmation Dialogs
+**Format**: Clear question with consequence explanation
+```
+❓ "Are you sure you want to remove this player?"
+❓ "Are you sure you want to delete this event? This cannot be undone."
+❓ "Are you sure you want to completely reset the application? All saved data will be permanently lost."
+```
+
+### Smart Guidance Messages
+**Format**: Problem explanation + suggested action
+```
+💡 "You need at least one player in your roster to create a game. Would you like to add players now?"
+💡 "Are you sure you want to start a new match? Any unsaved progress will be lost."
+```
+
+## Internationalization
+
+### Translation Key Structure
+
+**Validation Messages**:
+- `rosterSettingsModal.nameRequired`
+- `playerStats.teamRequired`
+- `playerStats.opponentRequired`
+- `playerStats.seasonRequired`
+- `playerStats.negativeStatsError`
+- `playerStats.emptyStatsError`
+- `gameStatsModal.invalidTimeFormat`
+- `gameStatsModal.scorerRequired`
+
+**Confirmation Messages**:
+- `rosterSettingsModal.confirmDeletePlayer`
+- `loadGameModal.deleteConfirm`
+- `gameStatsModal.confirmDeleteEvent`
+- `controlBar.hardResetConfirmation`
+- `controlBar.startNewMatchConfirmation`
+- `seasonTournamentModal.confirmDelete`
+- `orphanedGames.confirmDelete`
+
+**Status Messages**:
+- `fullBackup.exportSuccess`
+- `fullBackup.exportError`
+- `fullBackup.restoreSuccess`
+- `fullBackup.restoreError`
+- `fullBackup.restoreKeyError`
+- `fullBackup.confirmRestore`
+
+**Smart Detection Messages**:
+- `controlBar.noPlayersForNewGame`
+
+### Language Support
+- **Complete English/Finnish Coverage**: All alert messages have translations
+- **Fallback Handling**: Default English text provided when translations missing
+- **Dynamic Content**: Messages include dynamic data (player names, counts, etc.)
+- **Contextual Translation**: Messages preserve meaning across languages
+
+### Translation Examples
+```typescript
+// English/Finnish examples
+"Are you sure you want to remove this player?" / "Oletko varma, että haluat poistaa tämän pelaajan?"
+"Player name cannot be empty." / "Pelaajan nimi ei voi olla tyhjä."
+"Invalid time format. MM:SS" / "Virheellinen aikamuoto. MM:SS"
+```
+
+## Implementation Patterns
+
+### Validation Flow
+```typescript
+const handleSave = () => {
+  // 1. Validate input
+  if (!isValid) {
+    alert(t('validationMessage'));
+    return; // Stop execution
+  }
+  
+  // 2. Proceed with operation
+  performSave();
+};
+```
+
+### Confirmation Flow
+```typescript
+const handleDelete = () => {
+  // 1. Ask for confirmation
+  const confirmed = window.confirm(t('confirmationMessage'));
+  
+  // 2. Proceed only if confirmed
+  if (confirmed) {
+    performDelete();
+  }
+  // 3. Do nothing if cancelled
+};
+```
+
+### Error Handling Flow
+```typescript
+const handleOperation = async () => {
+  try {
+    await performOperation();
+    alert(t('successMessage'));
+  } catch (error) {
+    alert(t('errorMessage', { error: error.message }));
+  }
+};
+```
+
+## User Experience Considerations
+
+### Timing and Context
+- **Immediate Validation**: Alerts appear immediately on form submission
+- **Pre-Action Confirmation**: Confirmations appear before destructive actions
+- **Post-Action Feedback**: Success/error messages appear after operation completion
+- **Smart Interruption**: Alerts only interrupt when necessary
+
+### Message Clarity
+- **Direct Language**: Clear, concise messaging without technical jargon
+- **Action-Oriented**: Messages explain what will happen and why
+- **Solution-Focused**: Error messages suggest next steps when possible
+- **Consequence-Aware**: Destructive action warnings explain impact
+
+### Cross-Platform Reliability
+- **Native Styling**: Uses browser's default dialog appearance
+- **Keyboard Accessible**: Standard keyboard navigation (Tab, Enter, Escape)
+- **Screen Reader Compatible**: Native dialogs work with assistive technology
+- **Mobile Optimized**: Native dialogs adapt to mobile interaction patterns
+
+## Integration Points
+
+### Form Validation Integration
+- **Inline with Form Logic**: Validation alerts prevent form submission
+- **Field-Specific**: Messages relate to specific form fields
+- **Translation Aware**: All validation uses i18n translation keys
+
+### Modal System Integration
+- **Higher Z-Index**: Native dialogs appear above all modal content
+- **Focus Management**: Native dialogs handle focus automatically
+- **State Preservation**: App state maintained during dialog interactions
+
+### Router/Navigation Integration
+- **Route Protection**: Confirmations can prevent navigation
+- **State Confirmation**: Warns before losing unsaved changes
+- **Smart Redirection**: Confirmations can trigger navigation to relevant screens
+
+## Error Handling Patterns
+
+### Graceful Degradation
+```typescript
+// Always provide fallback text
+const message = t('validationKey', 'Default English message') || 'Fallback message';
+alert(message);
+```
+
+### Async Operation Handling
+```typescript
+try {
+  await performOperation();
+  alert(t('successMessage'));
+} catch (error) {
+  // Log error for debugging but show user-friendly message
+  logger.error('Operation failed:', error);
+  alert(t('operationFailedMessage', 'Operation failed. Please try again.'));
+}
+```
+
+### Network/Connection Errors
+- Always provide user-friendly error messages
+- Avoid exposing technical error details
+- Suggest concrete next steps when possible
+- Log technical details separately for debugging
+
+## Key Behaviors Summary
+
+1. **Native Browser Dialogs**: Uses `window.alert()` and `window.confirm()` exclusively
+2. **Comprehensive Validation**: Form inputs validated with immediate feedback
+3. **Destructive Action Protection**: All delete operations require confirmation
+4. **Smart User Guidance**: Contextual suggestions for resolving blocked operations
+5. **Full Internationalization**: Complete English/Finnish support for all messages
+6. **Cross-Platform Consistency**: Identical behavior across all devices and browsers
+7. **Accessibility Compliant**: Native dialogs provide built-in accessibility features
+8. **Error Recovery Oriented**: Error messages guide users toward solutions
+9. **Graceful Error Handling**: Comprehensive error handling with user-friendly messages
