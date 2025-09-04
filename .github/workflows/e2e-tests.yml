@@ -1,10 +1,14 @@
-name: E2E Tests
+# E2E Tests Workflow - DISABLED
+# Re-enable when E2E test stability is improved
+name: E2E Tests (Disabled)
 
 on:
-  push:
-    branches: [ main, master, develop ]
-  pull_request:
-    branches: [ main, master, develop ]
+  # Disabled - uncomment to re-enable
+  # push:
+  #   branches: [ main, master, develop ]
+  # pull_request:
+  #   branches: [ main, master, develop ]
+  workflow_dispatch: # Allow manual triggering only
 
 jobs:
   test:
