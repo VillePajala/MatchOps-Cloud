@@ -28,7 +28,7 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const getOperationIcon = (type: string, status: string) => {
+  const getOperationIcon = (type?: string, status?: string) => {
     if (status === 'syncing') return '🔄';
     if (status === 'completed') return '✅';
     if (status === 'failed') return '❌';
@@ -47,12 +47,12 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
     }
   };
 
-  const recentOperations = operations
+  const recentOperations = (operations || [])
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 20);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div role="dialog" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -61,6 +61,7 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <span className="sr-only">Close</span>
@@ -110,6 +111,10 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div 
+                role="progressbar"
+                aria-valuenow={overallProgress}
+                aria-valuemin={0}
+                aria-valuemax={100}
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${overallProgress}%` }}
               ></div>
@@ -144,7 +149,7 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {operations.filter(op => op.status === 'completed').length}
+                {(operations || []).filter(op => op.status === 'completed').length}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">Completed</div>
             </div>
@@ -186,7 +191,7 @@ export const SyncProgressModal = ({ isOpen, onClose }: SyncProgressModalProps) =
                       </span>
                       <div>
                         <div className="font-medium text-gray-900 dark:text-white">
-                          {operation.type.replace('_', ' ')} - {operation.table}
+                          {(operation.type || 'unknown').replace('_', ' ')} - {operation.table || 'unknown'}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           {formatTimestamp(operation.timestamp)}

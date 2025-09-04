@@ -25,7 +25,7 @@ export interface ModalPerformanceMetrics {
   };
 }
 
-class PerformanceMetricsCollector {
+export class PerformanceMetricsCollector {
   private metrics: ModalPerformanceMetrics = {
     newGameModal: {
       openToInteractive: null,

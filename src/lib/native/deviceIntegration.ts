@@ -322,25 +322,25 @@ export class DeviceIntegration {
     return {
       gameResult: (teamName: string, score: string, date: string): ShareData => ({
         title: `🏆 Game Result - ${teamName}`,
-        text: `${teamName} just finished their game!\n\nFinal Score: ${score}\nDate: ${date}\n\nTracked with MatchOps Coach ⚽`,
+        text: `${teamName} just finished their game!\n\nFinal Score: ${score}\nDate: ${date}\n\nTracked with MatchOps Cloud ⚽`,
         url: window.location.origin
       }),
 
       playerStats: (playerName: string, goals: number, assists: number): ShareData => ({
         title: `⭐ Player Stats - ${playerName}`,
-        text: `${playerName}'s performance:\n🥅 Goals: ${goals}\n🎯 Assists: ${assists}\n\nTracked with MatchOps Coach ⚽`,
+        text: `${playerName}'s performance:\n🥅 Goals: ${goals}\n🎯 Assists: ${assists}\n\nTracked with MatchOps Cloud ⚽`,
         url: window.location.origin
       }),
 
       teamRoster: (teamName: string, playerCount: number): ShareData => ({
         title: `👥 Team Roster - ${teamName}`,
-        text: `Check out our ${teamName} roster with ${playerCount} players!\n\nManaged with MatchOps Coach ⚽`,
+        text: `Check out our ${teamName} roster with ${playerCount} players!\n\nManaged with MatchOps Cloud ⚽`,
         url: window.location.origin
       }),
 
       appRecommendation: (): ShareData => ({
-        title: '⚽ MatchOps Coach - Soccer Coaching App',
-        text: 'I\'ve been using MatchOps Coach for my soccer team and it\'s amazing! Plan • Track • Debrief your matches with the ultimate coaching app. Perfect for coaches at any level!',
+        title: '⚽ MatchOps Cloud - Soccer Coaching App',
+        text: 'I\'ve been using MatchOps Cloud for my soccer team and it\'s amazing! Plan • Track • Debrief your matches with the ultimate coaching app. Perfect for coaches at any level!',
         url: window.location.origin
       }),
 

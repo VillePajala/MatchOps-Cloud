@@ -7,7 +7,6 @@ import {
   updateAppSettings as utilUpdateAppSettings,
 } from '@/utils/appSettings';
 import { exportFullBackup } from '@/utils/fullBackup';
-import { sendBackupEmail } from '@/utils/sendBackupEmail';
 import logger from '@/utils/logger';
 import { useToast } from '@/contexts/ToastProvider';
 import { hardResetAllUserData } from '@/utils/hardResetApp';
@@ -75,31 +74,22 @@ export const useAppSettingsManager = ({
   const handleCreateAndSendBackup = useCallback(async () => {
     try {
       const json = await exportFullBackup();
-      if (backupEmail) {
-        const confirmSend = window.confirm(
-          t('settingsModal.sendBackupPrompt', 'Send backup via email?'),
-        );
-        if (confirmSend) {
-          await sendBackupEmail(json, backupEmail);
-          showToast(t('settingsModal.sendBackupSuccess', 'Backup sent successfully.'), 'success');
-        }
-      } else {
-        // Download backup if no email is set
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `soccer-app-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      // Always download backup as a file (email functionality removed)
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `soccer-app-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(t('settingsModal.backupDownloaded', 'Backup downloaded successfully.'), 'success');
     } catch (error) {
       logger.error("Error creating backup:", error);
       showToast(t('settingsModal.backupError', 'Failed to create backup.'), 'error');
     }
-  }, [backupEmail, t, showToast]);
+  }, [t, showToast]);
 
   // --- Settings Change Handlers ---
   const handleLanguageChange = useCallback((lang: string) => {

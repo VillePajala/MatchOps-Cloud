@@ -444,7 +444,8 @@ export const useUIStore = create<UIStore>()(
         (state) => ({ 
           view: { 
             ...state.view, 
-            currentDrawingPoints: []
+            currentDrawingPoints: [],
+            isDrawing: false
           } 
         }),
         false,

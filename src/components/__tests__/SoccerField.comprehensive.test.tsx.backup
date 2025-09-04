@@ -1,0 +1,747 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@/__tests__/test-utils';
+import SoccerField, { SoccerFieldProps } from '../SoccerField';
+import { Player, Opponent, Point, TacticalDisc } from '@/types';
+
+// Mock tinycolor
+jest.mock('tinycolor2', () => {
+  return jest.fn((color: string) => ({
+    toRgbString: () => color,
+    lighten: jest.fn().mockReturnThis(),
+    darken: jest.fn().mockReturnThis(),
+    setAlpha: jest.fn().mockReturnThis(),
+  }));
+});
+
+// Mock logger
+jest.mock('@/utils/logger', () => ({
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+// Mock canvas context with enhanced functionality
+const mockCanvasContext = {
+  clearRect: jest.fn(),
+  fillRect: jest.fn(),
+  strokeRect: jest.fn(),
+  rect: jest.fn(),
+  beginPath: jest.fn(),
+  closePath: jest.fn(),
+  moveTo: jest.fn(),
+  lineTo: jest.fn(),
+  arc: jest.fn(),
+  fill: jest.fn(),
+  stroke: jest.fn(),
+  save: jest.fn(),
+  restore: jest.fn(),
+  translate: jest.fn(),
+  scale: jest.fn(),
+  rotate: jest.fn(),
+  resetTransform: jest.fn(),
+  fillText: jest.fn(),
+  strokeText: jest.fn(),
+  measureText: jest.fn(() => ({ width: 50 })),
+  createPattern: jest.fn(() => 'mock-pattern'),
+  createLinearGradient: jest.fn(() => ({
+    addColorStop: jest.fn(),
+  })),
+  createRadialGradient: jest.fn(() => ({
+    addColorStop: jest.fn(),
+  })),
+  createImageData: jest.fn(() => ({
+    data: new Uint8ClampedArray(1600), // 800x600 * 4 channels
+  })),
+  putImageData: jest.fn(),
+  getImageData: jest.fn(() => ({
+    data: new Uint8ClampedArray(1600),
+  })),
+  setLineDash: jest.fn(),
+  getLineDash: jest.fn(() => []),
+  drawImage: jest.fn(),
+  canvas: {
+    width: 800,
+    height: 600,
+    getBoundingClientRect: jest.fn(() => ({
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 600,
+      width: 800,
+      height: 600,
+      x: 0,
+      y: 0,
+    })),
+  },
+  lineWidth: 1,
+  strokeStyle: '#000000',
+  fillStyle: '#000000',
+  globalAlpha: 1,
+  globalCompositeOperation: 'source-over',
+  font: '10px sans-serif',
+  textAlign: 'start',
+  textBaseline: 'alphabetic',
+  lineCap: 'butt',
+  lineJoin: 'miter',
+  miterLimit: 10,
+  shadowBlur: 0,
+  shadowColor: 'rgba(0, 0, 0, 0)',
+  shadowOffsetX: 0,
+  shadowOffsetY: 0,
+};
+
+// Mock createElement for noise pattern testing
+const originalCreateElement = document.createElement;
+beforeAll(() => {
+  document.createElement = jest.fn((tagName: string) => {
+    if (tagName === 'canvas') {
+      const el = originalCreateElement.call(document, 'canvas') as HTMLCanvasElement;
+      Object.defineProperty(el, 'getContext', { value: () => mockCanvasContext });
+      return el as any;
+    }
+    return originalCreateElement.call(document, tagName);
+  }) as any;
+});
+
+afterAll(() => {
+  document.createElement = originalCreateElement;
+});
+
+// Mock HTMLCanvasElement
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  value: () => mockCanvasContext,
+});
+
+// Mock getBoundingClientRect for canvas
+Object.defineProperty(HTMLCanvasElement.prototype, 'getBoundingClientRect', {
+  value: () => ({
+    left: 0,
+    top: 0,
+    right: 800,
+    bottom: 600,
+    width: 800,
+    height: 600,
+    x: 0,
+    y: 0,
+  }),
+});
+
+// Mock window.devicePixelRatio
+Object.defineProperty(window, 'devicePixelRatio', {
+  value: 2,
+  writable: true,
+});
+
+// Mock requestAnimationFrame and cancelAnimationFrame
+global.requestAnimationFrame = jest.fn((cb) => {
+  setTimeout(cb, 16);
+  return 1;
+});
+global.cancelAnimationFrame = jest.fn();
+
+describe('SoccerField Comprehensive Testing', () => {
+  const defaultProps: SoccerFieldProps = {
+    players: [],
+    opponents: [],
+    drawings: [],
+    showPlayerNames: true,
+    onPlayerDrop: jest.fn(),
+    onPlayerMove: jest.fn(),
+    onPlayerMoveEnd: jest.fn(),
+    onDrawingStart: jest.fn(),
+    onDrawingAddPoint: jest.fn(),
+    onDrawingEnd: jest.fn(),
+    onPlayerRemove: jest.fn(),
+    onOpponentMove: jest.fn(),
+    onOpponentMoveEnd: jest.fn(),
+    onOpponentRemove: jest.fn(),
+    draggingPlayerFromBarInfo: null,
+    onPlayerDropViaTouch: jest.fn(),
+    onPlayerDragCancelViaTouch: jest.fn(),
+    timeElapsedInSeconds: 0,
+    isTacticsBoardView: false,
+    tacticalDiscs: [],
+    onTacticalDiscMove: jest.fn(),
+    onTacticalDiscRemove: jest.fn(),
+    onToggleTacticalDiscType: jest.fn(),
+    tacticalBallPosition: null,
+    onTacticalBallMove: jest.fn(),
+  };
+
+  const mockPlayer: Player = {
+    id: 'player-1',
+    name: 'Test Player',
+    jerseyNumber: 10,
+    fieldPosition: { relX: 0.5, relY: 0.5 },
+  };
+
+  const mockOpponent: Opponent = {
+    id: 'opponent-1',
+    fieldPosition: { relX: 0.3, relY: 0.3 },
+  };
+
+  const mockTacticalDisc: TacticalDisc = {
+    id: 'disc-1',
+    type: 'home',
+    position: { relX: 0.4, relY: 0.4 },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCanvasContext.canvas.width = 800;
+    mockCanvasContext.canvas.height = 600;
+  });
+
+  describe('Component Initialization', () => {
+    it('should render canvas element', () => {
+      const { container } = render(<SoccerField {...defaultProps} />);
+      const canvas = container.querySelector('canvas');
+      expect(canvas).toBeInTheDocument();
+      expect(canvas?.tagName).toBe('CANVAS');
+    });
+
+    it('should initialize with proper canvas dimensions', async () => {
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.scale).toHaveBeenCalled();
+      });
+    });
+
+    it('should load ball image on mount', async () => {
+      // Mock Image constructor
+      const mockImage = {
+        src: '',
+        onload: null as (() => void) | null,
+      };
+      
+      global.Image = jest.fn(() => mockImage) as any;
+      
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      // Simulate image load
+      if (mockImage.onload) {
+        mockImage.onload();
+      }
+      
+      expect(mockImage.src).toBe('/ball.png');
+    });
+  });
+
+  describe('Player Interactions', () => {
+    it('should handle player drag and drop', () => {
+      const onPlayerDrop = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerDrop={onPlayerDrop} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Start drag
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      
+      // Move
+      fireEvent.mouseMove(canvas, { clientX: 450, clientY: 350 });
+      
+      // Drop
+      fireEvent.mouseUp(canvas, { clientX: 450, clientY: 350 });
+      
+      expect(onPlayerDrop).toHaveBeenCalledWith('player-1', expect.any(Number), expect.any(Number));
+    });
+
+    it('should handle player movement during drag', () => {
+      const onPlayerMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerMove={onPlayerMove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseMove(canvas, { clientX: 420, clientY: 320 });
+      
+      expect(onPlayerMove).toHaveBeenCalledWith('player-1', expect.any(Number), expect.any(Number));
+    });
+
+    it('should handle player move end', () => {
+      const onPlayerMoveEnd = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerMoveEnd={onPlayerMoveEnd} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseUp(canvas, { clientX: 400, clientY: 300 });
+      
+      expect(onPlayerMoveEnd).toHaveBeenCalled();
+    });
+
+    it('should handle double-click player removal', async () => {
+      const onPlayerRemove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerRemove={onPlayerRemove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // First click
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseUp(canvas, { clientX: 400, clientY: 300 });
+      
+      // Second click within threshold
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseUp(canvas, { clientX: 400, clientY: 300 });
+      
+      await waitFor(() => {
+        expect(onPlayerRemove).toHaveBeenCalledWith('player-1');
+      });
+    });
+  });
+
+  describe('Touch Interactions', () => {
+    it('should handle touch drag from player bar', () => {
+      const onPlayerDropViaTouch = jest.fn();
+      const draggingPlayer = { ...mockPlayer, fieldPosition: null };
+      
+      const { container } = render(<SoccerField {...defaultProps} 
+        draggingPlayerFromBarInfo={draggingPlayer}
+        onPlayerDropViaTouch={onPlayerDropViaTouch}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.touchStart(canvas, {
+        touches: [{ clientX: 400, clientY: 300, identifier: 0 }]
+      });
+      
+      fireEvent.touchEnd(canvas, {
+        changedTouches: [{ clientX: 400, clientY: 300, identifier: 0 }]
+      });
+      
+      expect(onPlayerDropViaTouch).toHaveBeenCalledWith(expect.any(Number), expect.any(Number));
+    });
+
+    it('should handle touch drag cancel', () => {
+      const onPlayerDragCancelViaTouch = jest.fn();
+      const draggingPlayer = { ...mockPlayer, fieldPosition: null };
+      
+      const { container } = render(<SoccerField {...defaultProps} 
+        draggingPlayerFromBarInfo={draggingPlayer}
+        onPlayerDragCancelViaTouch={onPlayerDragCancelViaTouch}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.touchStart(canvas, {
+        touches: [{ clientX: 400, clientY: 300, identifier: 0 }]
+      });
+      
+      // Move outside field bounds
+      fireEvent.touchMove(canvas, {
+        touches: [{ clientX: -100, clientY: 300, identifier: 0 }]
+      });
+      
+      fireEvent.touchEnd(canvas, {
+        changedTouches: [{ clientX: -100, clientY: 300, identifier: 0 }]
+      });
+      
+      expect(onPlayerDragCancelViaTouch).toHaveBeenCalled();
+    });
+
+    it('should handle multi-touch interactions', () => {
+      const onPlayerMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerMove={onPlayerMove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Start with multiple touches
+      fireEvent.touchStart(canvas, {
+        touches: [
+          { clientX: 400, clientY: 300, identifier: 0 },
+          { clientX: 500, clientY: 400, identifier: 1 }
+        ]
+      });
+      
+      // Only the first touch should be active
+      fireEvent.touchMove(canvas, {
+        touches: [{ clientX: 420, clientY: 320, identifier: 0 }]
+      });
+      
+      expect(onPlayerMove).toHaveBeenCalledWith('player-1', expect.any(Number), expect.any(Number));
+    });
+  });
+
+  describe('Drawing Interactions', () => {
+    it('should handle drawing start', () => {
+      const onDrawingStart = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} onDrawingStart={onDrawingStart} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Right click to start drawing
+      fireEvent.contextMenu(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 2 });
+      
+      expect(onDrawingStart).toHaveBeenCalledWith({ relX: expect.any(Number), relY: expect.any(Number) });
+    });
+
+    it('should handle drawing add points', () => {
+      const onDrawingAddPoint = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} onDrawingAddPoint={onDrawingAddPoint} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Start drawing
+      fireEvent.contextMenu(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 2 });
+      
+      // Add points while dragging
+      fireEvent.mouseMove(canvas, { clientX: 120, clientY: 120 });
+      fireEvent.mouseMove(canvas, { clientX: 140, clientY: 140 });
+      
+      expect(onDrawingAddPoint).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle drawing end', () => {
+      const onDrawingEnd = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} onDrawingEnd={onDrawingEnd} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Start and end drawing
+      fireEvent.contextMenu(canvas, { clientX: 100, clientY: 100 });
+      fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100, button: 2 });
+      fireEvent.mouseUp(canvas, { clientX: 150, clientY: 150, button: 2 });
+      
+      expect(onDrawingEnd).toHaveBeenCalled();
+    });
+
+    it('should render existing drawings', async () => {
+      const drawings: Point[][] = [
+        [
+          { relX: 0.1, relY: 0.1 },
+          { relX: 0.2, relY: 0.2 },
+          { relX: 0.3, relY: 0.3 }
+        ]
+      ];
+      
+      const { container } = render(<SoccerField {...defaultProps} drawings={drawings} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.beginPath).toHaveBeenCalled();
+        expect(mockCanvasContext.moveTo).toHaveBeenCalled();
+        expect(mockCanvasContext.lineTo).toHaveBeenCalled();
+        expect(mockCanvasContext.stroke).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Opponent Interactions', () => {
+    it('should handle opponent drag and drop', () => {
+      const onOpponentMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} opponents={[mockOpponent]} onOpponentMove={onOpponentMove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 240, clientY: 180 });
+      fireEvent.mouseMove(canvas, { clientX: 260, clientY: 200 });
+      
+      expect(onOpponentMove).toHaveBeenCalledWith('opponent-1', expect.any(Number), expect.any(Number));
+    });
+
+    it('should handle opponent move end', () => {
+      const onOpponentMoveEnd = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} opponents={[mockOpponent]} onOpponentMoveEnd={onOpponentMoveEnd} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 240, clientY: 180 });
+      fireEvent.mouseUp(canvas, { clientX: 240, clientY: 180 });
+      
+      expect(onOpponentMoveEnd).toHaveBeenCalledWith('opponent-1');
+    });
+
+    it('should handle double-click opponent removal', async () => {
+      const onOpponentRemove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} opponents={[mockOpponent]} onOpponentRemove={onOpponentRemove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Double click
+      fireEvent.mouseDown(canvas, { clientX: 240, clientY: 180 });
+      fireEvent.mouseUp(canvas, { clientX: 240, clientY: 180 });
+      fireEvent.mouseDown(canvas, { clientX: 240, clientY: 180 });
+      fireEvent.mouseUp(canvas, { clientX: 240, clientY: 180 });
+      
+      await waitFor(() => {
+        expect(onOpponentRemove).toHaveBeenCalledWith('opponent-1');
+      });
+    });
+  });
+
+  describe('Tactical Board Mode', () => {
+    it('should render tactical discs in tactical mode', async () => {
+      const { container } = render(<SoccerField {...defaultProps} 
+        isTacticsBoardView={true} 
+        tacticalDiscs={[mockTacticalDisc]} 
+      />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.arc).toHaveBeenCalled();
+        expect(mockCanvasContext.fill).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle tactical disc movement', () => {
+      const onTacticalDiscMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} 
+        isTacticsBoardView={true} 
+        tacticalDiscs={[mockTacticalDisc]}
+        onTacticalDiscMove={onTacticalDiscMove}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 320, clientY: 240 });
+      fireEvent.mouseMove(canvas, { clientX: 340, clientY: 260 });
+      
+      expect(onTacticalDiscMove).toHaveBeenCalledWith('disc-1', expect.any(Number), expect.any(Number));
+    });
+
+    it('should handle tactical disc type toggle', async () => {
+      const onToggleTacticalDiscType = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} 
+        isTacticsBoardView={true} 
+        tacticalDiscs={[mockTacticalDisc]}
+        onToggleTacticalDiscType={onToggleTacticalDiscType}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Double click to toggle type
+      fireEvent.mouseDown(canvas, { clientX: 320, clientY: 240 });
+      fireEvent.mouseUp(canvas, { clientX: 320, clientY: 240 });
+      fireEvent.mouseDown(canvas, { clientX: 320, clientY: 240 });
+      fireEvent.mouseUp(canvas, { clientX: 320, clientY: 240 });
+      
+      await waitFor(() => {
+        expect(onToggleTacticalDiscType).toHaveBeenCalledWith('disc-1');
+      });
+    });
+
+    it('should handle tactical disc removal', async () => {
+      const onTacticalDiscRemove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} 
+        isTacticsBoardView={true} 
+        tacticalDiscs={[mockTacticalDisc]}
+        onTacticalDiscRemove={onTacticalDiscRemove}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Right click to remove
+      fireEvent.contextMenu(canvas, { clientX: 320, clientY: 240 });
+      
+      expect(onTacticalDiscRemove).toHaveBeenCalledWith('disc-1');
+    });
+
+    it('should handle tactical ball movement', () => {
+      const onTacticalBallMove = jest.fn();
+      const ballPosition = { relX: 0.6, relY: 0.6 };
+      
+      const { container } = render(<SoccerField {...defaultProps} 
+        isTacticsBoardView={true} 
+        tacticalBallPosition={ballPosition}
+        onTacticalBallMove={onTacticalBallMove}
+      />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 480, clientY: 360 });
+      fireEvent.mouseMove(canvas, { clientX: 500, clientY: 380 });
+      
+      expect(onTacticalBallMove).toHaveBeenCalledWith({ relX: expect.any(Number), relY: expect.any(Number) });
+    });
+  });
+
+  describe('Visual Rendering', () => {
+    it('should render field background and lines', async () => {
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.fillRect).toHaveBeenCalled();
+        expect(mockCanvasContext.strokeRect).toHaveBeenCalled();
+      });
+    });
+
+    it('should render player names when enabled', async () => {
+      const { container } = render(<SoccerField {...defaultProps} 
+        players={[mockPlayer]} 
+        showPlayerNames={true}
+      />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.fillText).toHaveBeenCalledWith(expect.stringContaining('Test Player'), expect.any(Number), expect.any(Number));
+      });
+    });
+
+    it('should not render player names when disabled', async () => {
+      const { container } = render(<SoccerField {...defaultProps} 
+        players={[mockPlayer]} 
+        showPlayerNames={false}
+      />);
+      
+      await waitFor(() => {
+        // Should still render but without names
+        expect(mockCanvasContext.arc).toHaveBeenCalled();
+      });
+    });
+
+    it('should render timer display', async () => {
+      const { container } = render(<SoccerField {...defaultProps} timeElapsedInSeconds={125} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.fillText).toHaveBeenCalledWith('02:05', expect.any(Number), expect.any(Number));
+      });
+    });
+
+    it('should handle high-DPI displays', async () => {
+      // Set device pixel ratio
+      Object.defineProperty(window, 'devicePixelRatio', { value: 2 });
+      
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.scale).toHaveBeenCalledWith(2, 2);
+      });
+    });
+  });
+
+  describe('Performance Optimizations', () => {
+    it('should use requestAnimationFrame for rendering', async () => {
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      expect(requestAnimationFrame).toHaveBeenCalled();
+    });
+
+    it('should cancel animation frame on unmount', () => {
+      const { unmount } = render(<SoccerField {...defaultProps} />);
+      
+      unmount();
+      
+      expect(cancelAnimationFrame).toHaveBeenCalled();
+    });
+
+    it('should handle noise pattern caching', async () => {
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(mockCanvasContext.createPattern).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle invalid canvas dimensions gracefully', async () => {
+      // Mock invalid dimensions
+      mockCanvasContext.canvas.getBoundingClientRect = jest.fn(() => ({
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+      }));
+      
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      await waitFor(() => {
+        // Should handle gracefully without crashing
+        expect(screen.getByRole('img')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Event Handling Edge Cases', () => {
+    it('should handle missing canvas context', () => {
+      // Mock null context
+      const originalGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = jest.fn(() => null);
+      
+      const { container } = render(<SoccerField {...defaultProps} />);
+      
+      // Should not crash
+      expect(screen.getByRole('img')).toBeInTheDocument();
+      
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    });
+
+    it('should handle mouse events outside canvas bounds', () => {
+      const onPlayerMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerMove={onPlayerMove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseMove(canvas, { clientX: 1000, clientY: 1000 }); // Outside bounds
+      
+      // Should handle gracefully
+      expect(onPlayerMove).toHaveBeenCalled();
+    });
+
+    it('should handle rapid successive events', () => {
+      const onPlayerMove = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} onPlayerMove={onPlayerMove} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      
+      // Rapid movements
+      for (let i = 0; i < 10; i++) {
+        fireEvent.mouseMove(canvas, { clientX: 400 + i, clientY: 300 + i });
+      }
+      
+      expect(onPlayerMove).toHaveBeenCalledTimes(10);
+    });
+
+    it('should handle touch events without active touch', () => {
+      const { container } = render(<SoccerField {...defaultProps} players={[mockPlayer]} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Touch move without touch start
+      fireEvent.touchMove(canvas, {
+        touches: [{ clientX: 400, clientY: 300, identifier: 0 }]
+      });
+      
+      // Should handle gracefully without crashing
+      expect(canvas).toBeInTheDocument();
+    });
+  });
+
+  describe('Coordinate Calculations', () => {
+    it('should convert screen coordinates to relative coordinates correctly', () => {
+      const onPlayerDrop = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} onPlayerDrop={onPlayerDrop} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Click at center of 800x600 canvas
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 300 });
+      fireEvent.mouseUp(canvas, { clientX: 400, clientY: 300 });
+      
+      // Should convert to relative coordinates (0.5, 0.5)
+      expect(onPlayerDrop).toHaveBeenCalledWith(undefined, 0.5, 0.5);
+    });
+
+    it('should handle edge coordinate calculations', () => {
+      const onDrawingStart = jest.fn();
+      const { container } = render(<SoccerField {...defaultProps} onDrawingStart={onDrawingStart} />);
+      
+      const canvas = container.querySelector('canvas')!;
+      
+      // Click at corners
+      fireEvent.contextMenu(canvas, { clientX: 0, clientY: 0 });
+      fireEvent.mouseDown(canvas, { clientX: 0, clientY: 0, button: 2 });
+      
+      expect(onDrawingStart).toHaveBeenCalledWith({ relX: 0, relY: 0 });
+    });
+  });
+});

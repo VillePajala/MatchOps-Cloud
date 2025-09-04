@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import logger from '@/utils/logger';
 
 jest.mock('@/lib/supabase');
-jest.mock('@/utils/logger');
+jest.mock('@/utils/logger', () => ({ debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn(), }));
 
 describe('resetAllSupabaseData', () => {
   const mockUser = { id: 'user123' };

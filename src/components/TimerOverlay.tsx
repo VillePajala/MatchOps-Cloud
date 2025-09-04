@@ -367,17 +367,17 @@ const TimerOverlay: React.FC<TimerOverlayProps> = ({
         )}
       </div>
 
-      {/* ADD CLOSE BUTTON HERE */}
+      {/* Close button moved to bottom to match other modals */}
       {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-          aria-label={t('common.close', 'Close')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+          <button
+            onClick={onClose}
+            className="bg-slate-700 hover:bg-slate-600 text-slate-100 font-semibold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-slate-500"
+            aria-label={t('common.close', 'Close')}
+          >
+            {t('common.close', 'Sulje')}
+          </button>
+        </div>
       )}
     </div>
   );

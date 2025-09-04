@@ -55,9 +55,9 @@ describe('SupabaseProvider delete methods', () => {
       .rejects.toThrow('Tournament not found');
   });
 
-  it('throws StorageError when deleting non-existent saved game', async () => {
+  it('completes without error when deleting non-existent saved game', async () => {
     await expect(provider.deleteSavedGame('missing'))
-      .rejects.toThrow('Saved game not found');
+      .resolves.toBeUndefined();
   });
 });
 

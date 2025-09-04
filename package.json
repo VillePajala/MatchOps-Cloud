@@ -1,5 +1,5 @@
 {
-  "name": "matchops-coach",
+  "name": "matchops-cloud",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,10 +14,18 @@
     "test:fast": "LOG_LEVEL=error jest --testPathIgnorePatterns='supabase|import|backup|export|useForm.test|useRosterSettingsModalState|useSettingsModalState|useViewMode' --maxWorkers=4 --silent",
     "test:slow": "LOG_LEVEL=error jest --testPathPattern='supabase|import|backup|export' --maxWorkers=2 --silent",
     "test:ci": "NODE_OPTIONS='--max-old-space-size=6144' LOG_LEVEL=error jest --coverage --maxWorkers=2 --silent --passWithNoTests --forceExit --testTimeout=10000",
+    "test:ci:fast": "LOG_LEVEL=error jest --testPathPattern='(utils|hooks|stores)/__tests__' --no-coverage --maxWorkers=1 --passWithNoTests --testTimeout=5000 --silent",
+    "test:ci:critical": "LOG_LEVEL=error jest --testPathPattern='(useGameState|safeJson|typeValidation|atomicSave|useOfflineManager)\\.test' --coverage --maxWorkers=1 --passWithNoTests --testTimeout=5000 --silent --coverageReporters=text-summary --coverageThreshold='{}'",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "test:smoke": "./scripts/smoke-test.sh",
+    "test:mutation": "stryker run",
+    "test:mutation:stores": "stryker run --mutate 'src/stores/**/*.ts'",
+    "test:mutation:utils": "stryker run --mutate 'src/utils/**/*.ts'",
+    "test:mutation:hooks": "stryker run --mutate 'src/hooks/**/*.ts'",
     "ci:bundle-budgets": "node scripts/check-bundle-budgets.mjs",
     "generate:i18n-types": "node scripts/generate-i18n-types.mjs",
     "analyze": "ANALYZE=true npm run build",
@@ -50,10 +58,15 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@axe-core/react": "^4.10.2",
     "@eslint/eslintrc": "^3",
+    "@mswjs/interceptors": "^0.39.6",
     "@next/bundle-analyzer": "^15.4.5",
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "^1.55.0",
+    "@stryker-mutator/core": "^9.0.1",
+    "@stryker-mutator/jest-runner": "^9.0.1",
+    "@stryker-mutator/typescript-checker": "^9.0.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -64,13 +77,17 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint-config-next": "15.3.0",
+    "fake-indexeddb": "^6.1.0",
     "jest": "^29.7.0",
     "jest-axe": "^10.0.0",
     "jest-environment-jsdom": "^29.7.0",
+    "msw": "^2.10.5",
     "snyk": "^1.1298.1",
     "supabase": "^2.31.8",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.1",
     "typescript": "^5",
-    "webpack-bundle-analyzer": "^4.10.2"
+    "webpack-bundle-analyzer": "^4.10.2",
+    "whatwg-fetch": "^3.6.20"
   }
 }

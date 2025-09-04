@@ -76,6 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Update session info
         setSessionInfo(sessionManager.getSessionInfo());
         
+        // Clean up URL parameters after sign-out
+        if (event === 'SIGNED_OUT' && !session) {
+          setTimeout(() => {
+            try {
+              const url = new URL(window.location.href);
+              if (url.searchParams.has('_signed_out')) {
+                url.searchParams.delete('_signed_out');
+                window.history.replaceState({}, '', url.toString());
+                logger.debug('Cleaned up _signed_out parameter from URL');
+              }
+            } catch (error) {
+              logger.warn('Failed to clean up URL after sign-out:', error);
+            }
+          }, 1000); // Short delay to allow redirect to complete
+        }
+        
         // PERFORMANCE: Prefetch modal components after successful sign-in
         if (event === 'SIGNED_IN' && session) {
           perfMark('auth:signInSuccess');

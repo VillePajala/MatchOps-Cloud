@@ -10,7 +10,7 @@ interface PerformanceMark {
   metadata?: Record<string, any>;
 }
 
-class PerformanceMonitor {
+export class PerformanceMonitor {
   private marks: Map<string, PerformanceMark> = new Map();
   private measures: Map<string, number> = new Map();
 

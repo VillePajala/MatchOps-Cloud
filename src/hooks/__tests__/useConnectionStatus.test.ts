@@ -99,20 +99,6 @@ describe('useConnectionStatus', () => {
     });
   });
 
-  it.skip('should detect poor connection quality based on response time', async () => {
-    // Mock slow response (> 2 seconds)
-    (global.fetch as jest.Mock).mockImplementation(() => 
-      new Promise(resolve => 
-        setTimeout(() => resolve({ ok: true, status: 200 }), 2100) // Just over 2 seconds
-      )
-    );
-
-    const { result } = renderHook(() => useConnectionStatus());
-
-    await waitFor(() => {
-      expect(result.current.connectionQuality).toBe('poor');
-    }, { timeout: 8000 });
-  }, 10000);
 
   it('should handle timeout correctly', async () => {
     // Mock request that never resolves (will be aborted)

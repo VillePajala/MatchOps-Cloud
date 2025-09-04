@@ -36,11 +36,6 @@ jest.mock('@/utils/fullBackup', () => ({
   exportFullBackup: jest.fn().mockResolvedValue('{}'),
 }));
 
-jest.mock('@/utils/sendBackupEmail', () => ({
-  __esModule: true,
-  sendBackupEmail: jest.fn().mockResolvedValue(undefined),
-}));
-
 jest.mock('@/lib/supabase', () => ({
   __esModule: true,
   default: {

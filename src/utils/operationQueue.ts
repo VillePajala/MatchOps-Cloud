@@ -21,7 +21,7 @@ export interface Operation {
   maxRetries?: number;
 }
 
-class OperationQueue {
+export class OperationQueue {
   private queues = new Map<OperationPriority, Operation[]>();
   private running = new Set<string>();
   private maxConcurrent = 2; // Allow 2 operations to run concurrently

@@ -102,7 +102,7 @@ export function isGameEvent(obj: unknown): obj is GameEvent {
 }
 
 export function isSavedGamesCollection(obj: unknown): obj is SavedGamesCollection {
-  if (typeof obj !== 'object' || obj === null) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
     return false;
   }
 

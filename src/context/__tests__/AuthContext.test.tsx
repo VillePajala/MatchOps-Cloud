@@ -8,7 +8,12 @@ import type { Session } from '@supabase/supabase-js';
 jest.mock('../../lib/supabase');
 jest.mock('../../lib/security/rateLimiter');
 jest.mock('../../lib/security/sessionManager');
-jest.mock('../../utils/logger');
+jest.mock('../../utils/logger', () => ({
+  debug: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+}));
 
 // Import after mocks
 import { supabase } from '../../lib/supabase';
@@ -76,6 +81,15 @@ describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUnsubscribe = jest.fn();
+    
+    // Mock window.location.replace to prevent navigation errors in tests
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        replace: jest.fn(),
+      },
+      writable: true,
+    });
     
     // Default mock implementations
     mockSupabaseAuth.getSession.mockResolvedValue({

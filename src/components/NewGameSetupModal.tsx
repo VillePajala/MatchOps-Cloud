@@ -94,6 +94,8 @@ const NewGameSetupModal: React.FC<NewGameSetupModalProps> = ({
   const { showToast } = useToast();
   const [homeTeamName, setHomeTeamName] = useState('');
   const [opponentName, setOpponentName] = useState('');
+  const [homeTeamNameError, setHomeTeamNameError] = useState('');
+  const [opponentNameError, setOpponentNameError] = useState('');
   const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]);
   const [gameLocation, setGameLocation] = useState('');
   const [gameHour, setGameHour] = useState<string>('');
@@ -212,6 +214,22 @@ const NewGameSetupModal: React.FC<NewGameSetupModalProps> = ({
     }
   }, [isOpen, initialPlayerSelection, availablePlayers, cachedLastHomeTeamName, t]);
 
+  // Validation handlers
+  const handleTeamNameBlur = () => {
+    if (!homeTeamName.trim()) {
+      setHomeTeamNameError(t('newGameSetupModal.homeTeamNameRequired', 'Home Team Name is required.'));
+    } else {
+      setHomeTeamNameError('');
+    }
+  };
+
+  const handleOpponentNameBlur = () => {
+    if (!opponentName.trim()) {
+      setOpponentNameError(t('newGameSetupModal.opponentNameRequired', 'Opponent Name is required.'));
+    } else {
+      setOpponentNameError('');
+    }
+  };
 
   const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -514,14 +532,24 @@ const NewGameSetupModal: React.FC<NewGameSetupModalProps> = ({
             <TeamOpponentInputs
               teamName={homeTeamName}
               opponentName={opponentName}
-              onTeamNameChange={setHomeTeamName}
-              onOpponentNameChange={setOpponentName}
+              onTeamNameChange={(value) => {
+                setHomeTeamName(value);
+                if (homeTeamNameError) setHomeTeamNameError('');
+              }}
+              onOpponentNameChange={(value) => {
+                setOpponentName(value);
+                if (opponentNameError) setOpponentNameError('');
+              }}
               teamLabel={t('newGameSetupModal.homeTeamName', 'Your Team Name') + ' *'}
               teamPlaceholder={t('newGameSetupModal.homeTeamPlaceholder', 'e.g., Galaxy U10')}
               opponentLabel={t('newGameSetupModal.opponentNameLabel', 'Opponent Name') + ' *'}
               opponentPlaceholder={t('newGameSetupModal.opponentPlaceholder', 'Enter opponent name')}
               teamInputRef={homeTeamInputRef}
               opponentInputRef={opponentInputRef}
+              teamNameError={homeTeamNameError}
+              opponentNameError={opponentNameError}
+              onTeamNameBlur={handleTeamNameBlur}
+              onOpponentNameBlur={handleOpponentNameBlur}
               onKeyDown={handleKeyDown}
               disabled={false}
               stableInputProps={getStableInputProps()}

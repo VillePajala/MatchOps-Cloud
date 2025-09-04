@@ -1,6 +1,9 @@
-# MatchOps Coach
+# MatchOps Cloud
 
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/VillePajala/soccer-pre-game-app)
+[![Test Coverage](https://img.shields.io/badge/Coverage-51.55%25-yellow)](https://github.com/VillePajala/soccer-pre-game-app/actions)
+[![Tests](https://github.com/VillePajala/soccer-pre-game-app/actions/workflows/test-unit-integration.yml/badge.svg)](https://github.com/VillePajala/soccer-pre-game-app/actions/workflows/test-unit-integration.yml)
+[![Quality Gates](https://github.com/VillePajala/soccer-pre-game-app/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/VillePajala/soccer-pre-game-app/actions/workflows/quality-gates.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15.3.5-black)](https://nextjs.org/)
 [![PWA](https://img.shields.io/badge/PWA-Enabled-purple)](https://web.dev/progressive-web-apps/)

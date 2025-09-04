@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSaveQueue } from './useSaveQueue';
 // import { useTranslation } from 'react-i18next'; // Removed unused import
@@ -77,9 +77,13 @@ export const useGameDataManager = ({
   // Initialize save queue to prevent race conditions in auto-save operations
   const saveQueue = useSaveQueue({
     debounceMs: 300, // Slightly shorter debounce for responsive auto-save
-    maxRetries: 2,   // Fewer retries for save operations to avoid delays
+    maxRetries: 1,   // Reduce retries to avoid long timeouts during network slowness
     maxQueueSize: 5  // Smaller queue for save operations
   });
+
+  // Guards to avoid saving while delete is in-flight or after deletion
+  const isDeleteInFlightRef = useRef<boolean>(false);
+  const deletedGameIdsRef = useRef<Set<string>>(new Set());
 
   // --- Season Mutations ---
   const addSeasonMutation = useMutation<
@@ -211,6 +215,16 @@ export const useGameDataManager = ({
       return null;
     }
 
+    // Skip save if a delete is in-flight or this game was deleted
+    if (isDeleteInFlightRef.current) {
+      logger.warn('[useGameDataManager] Skipping quick save because a delete is in-flight');
+      return null;
+    }
+    if (deletedGameIdsRef.current.has(gameId)) {
+      logger.warn(`[useGameDataManager] Skipping quick save because game ${gameId} was deleted`);
+      return null;
+    }
+
     let finalGameId: string | null = null;
 
     // Queue the save operation to prevent race conditions
@@ -218,6 +232,12 @@ export const useGameDataManager = ({
       `quick-save-${gameId}`,
       async () => {
         logger.log(`[useGameDataManager] Processing queued quick save for game ID: ${gameId}`);
+
+        // Skip if delete occurred after queueing but before execution
+        if (isDeleteInFlightRef.current || deletedGameIdsRef.current.has(gameId)) {
+          logger.warn(`[useGameDataManager] Aborting queued quick save; delete in progress or game ${gameId} deleted`);
+          return;
+        }
 
         // 1. Create the current game state snapshot
         const snapshot: AppState = overrideSnapshot ?? {
@@ -323,9 +343,14 @@ export const useGameDataManager = ({
     }
 
     try {
+      // Prevent competing auto-saves and mark deletion in-flight
+      isDeleteInFlightRef.current = true;
+      saveQueue.clearQueue();
+
       const deletedGameId = await utilDeleteGame(gameId);
 
       if (deletedGameId) {
+        deletedGameIdsRef.current.add(deletedGameId);
         setSavedGames(prevSavedGames => {
           const updatedSavedGames = { ...prevSavedGames };
           delete updatedSavedGames[gameId];
@@ -358,8 +383,11 @@ export const useGameDataManager = ({
     } catch (error) {
       logger.error(`[useGameDataManager] Error deleting game ${gameId}:`, error);
       throw error;
+    } finally {
+      // Allow future saves again
+      isDeleteInFlightRef.current = false;
     }
-  }, [setSavedGames, currentGameId, setCurrentGameId, queryClient]);
+  }, [setSavedGames, currentGameId, setCurrentGameId, queryClient, saveQueue]);
 
   // --- Export Handlers ---
   const handleExportOneJson = useCallback((gameId: string, seasons: Season[] = [], tournaments: Tournament[] = []) => {

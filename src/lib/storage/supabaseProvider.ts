@@ -620,20 +620,14 @@ export class SupabaseProvider implements IStorageProvider {
   async deleteSavedGame(gameId: string): Promise<void> {
     try {
       const userId = await this.getCurrentUserId();
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('games')
         .delete()
         .eq('id', gameId)
-        .eq('user_id', userId)
-        .select('id')
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) {
         throw new NetworkError('supabase', 'deleteSavedGame', error);
-      }
-
-      if (!data) {
-        throw new StorageError('Saved game not found', 'supabase', 'deleteSavedGame');
       }
     } catch (error) {
       if (error instanceof AuthenticationError || error instanceof NetworkError || error instanceof StorageError) {

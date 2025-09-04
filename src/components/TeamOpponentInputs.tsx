@@ -19,6 +19,10 @@ export interface TeamOpponentInputsProps {
     onFocus?: React.FocusEventHandler<HTMLInputElement>;
     onMouseDown?: React.MouseEventHandler<HTMLInputElement>;
   };
+  teamNameError?: string;
+  opponentNameError?: string;
+  onTeamNameBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onOpponentNameBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 const TeamOpponentInputs: React.FC<TeamOpponentInputsProps> = ({
@@ -35,6 +39,10 @@ const TeamOpponentInputs: React.FC<TeamOpponentInputsProps> = ({
   onKeyDown,
   disabled,
   stableInputProps,
+  teamNameError,
+  opponentNameError,
+  onTeamNameBlur,
+  onOpponentNameBlur,
 }) => {
   return (
     <>
@@ -48,12 +56,14 @@ const TeamOpponentInputs: React.FC<TeamOpponentInputsProps> = ({
           ref={teamInputRef}
           value={teamName}
           onChange={(e) => onTeamNameChange(e.target.value)}
+          onBlur={onTeamNameBlur}
           placeholder={teamPlaceholder}
           className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
           onKeyDown={onKeyDown}
           disabled={disabled}
           {...stableInputProps}
         />
+        {teamNameError && <div className="text-red-400 text-sm mt-1">{teamNameError}</div>}
       </div>
       <div className="mb-4">
         <label htmlFor="opponentNameInput" className="block text-sm font-medium text-slate-300 mb-1">
@@ -65,12 +75,14 @@ const TeamOpponentInputs: React.FC<TeamOpponentInputsProps> = ({
           ref={opponentInputRef}
           value={opponentName}
           onChange={(e) => onOpponentNameChange(e.target.value)}
+          onBlur={onOpponentNameBlur}
           placeholder={opponentPlaceholder}
           className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
           onKeyDown={onKeyDown}
           disabled={disabled}
           {...stableInputProps}
         />
+        {opponentNameError && <div className="text-red-400 text-sm mt-1">{opponentNameError}</div>}
       </div>
     </>
   );

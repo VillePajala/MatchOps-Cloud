@@ -51,7 +51,7 @@ describe('PlayerBar', () => {
     render(<PlayerBar {...defaultProps} />);
     
     // Find and click on the background (the main container)
-    const background = screen.getByRole('img', { name: /MatchOps Coach Logo/i }).closest('div');
+    const background = screen.getByRole('img', { name: /MatchOps Cloud Logo/i }).closest('div');
     if (background) {
       fireEvent.click(background);
       expect(defaultProps.onBarBackgroundClick).toHaveBeenCalled();
@@ -85,5 +85,75 @@ describe('PlayerBar', () => {
     expect(johnDisk).toBeInTheDocument();
     // John's color is #FF0000 (red)
     expect(johnDisk).toHaveStyle('background-color: #FF0000'); 
+  });
+
+  it('does not call onBarBackgroundClick when clicking on player elements', () => {
+    const onBarBackgroundClick = jest.fn();
+    render(<PlayerBar {...defaultProps} onBarBackgroundClick={onBarBackgroundClick} />);
+    
+    // Click on a player disk (not the background)
+    const johnDisk = screen.getByText('John');
+    fireEvent.click(johnDisk);
+    
+    // onBarBackgroundClick should not be called when clicking on players
+    expect(onBarBackgroundClick).not.toHaveBeenCalled();
+  });
+
+  it('handles missing optional handlers gracefully', () => {
+    const propsWithoutHandlers = {
+      ...defaultProps,
+      onBarBackgroundClick: undefined,
+      onPlayerTapInBar: undefined,
+      onToggleGoalie: undefined,
+      onPlayerDragStartFromBar: undefined,
+    };
+    
+    render(<PlayerBar {...propsWithoutHandlers} />);
+    
+    // Should render without errors
+    expect(screen.getByText('John')).toBeInTheDocument();
+  });
+
+  it('handles empty player list', () => {
+    const emptyProps = {
+      ...defaultProps,
+      players: [],
+      playersOnField: [],
+    };
+    
+    render(<PlayerBar {...emptyProps} />);
+    
+    // Should render the logo but no players
+    expect(screen.getByRole('img', { name: /MatchOps Cloud Logo/i })).toBeInTheDocument();
+    expect(screen.queryByText('John')).not.toBeInTheDocument();
+  });
+
+  it('handles drag and drop functionality', () => {
+    render(<PlayerBar {...defaultProps} />);
+    
+    // Find a player disk and test drag start
+    const johnDisk = screen.getByText('John').closest('div');
+    if (johnDisk) {
+      fireEvent.dragStart(johnDisk);
+      expect(defaultProps.onPlayerDragStartFromBar).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'player1',
+        name: 'John Doe',
+      }));
+    }
+  });
+
+  it('passes correct props to PlayerDisk components', () => {
+    const { rerender } = render(<PlayerBar {...defaultProps} selectedPlayerIdFromBar="player1" />);
+    
+    // Player1 should be selected
+    const johnDisk = screen.getByText('John').closest('div');
+    expect(johnDisk).toHaveClass('ring-4', 'ring-yellow-400');
+    
+    // Change selection
+    rerender(<PlayerBar {...defaultProps} selectedPlayerIdFromBar="player2" />);
+    
+    // Player2 should now be selected
+    const janeDisk = screen.getByText('Jane').closest('div');
+    expect(janeDisk).toHaveClass('ring-4', 'ring-yellow-400');
   });
 }); 
