@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider } from '@/context/AuthContext';
 
@@ -17,7 +17,7 @@ jest.mock('@/i18n', () => {
     hasResourceBundle: jest.fn().mockReturnValue(true),
     addResourceBundle: jest.fn(),
   };
-  
+
   return {
     __esModule: true,
     default: mockI18n,
@@ -29,11 +29,6 @@ jest.mock('@/utils/appSettings', () => ({
   __esModule: true,
   getAppSettings: jest.fn().mockResolvedValue({ language: 'en' }),
   updateAppSettings: jest.fn().mockResolvedValue({}),
-}));
-
-jest.mock('@/utils/fullBackup', () => ({
-  __esModule: true,
-  exportFullBackup: jest.fn().mockResolvedValue('{}'),
 }));
 
 jest.mock('@/lib/supabase', () => ({
@@ -59,20 +54,17 @@ import StartScreen from './StartScreen';
 describe('StartScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset i18n language to initial state
     i18n.language = 'en';
     mockLoadLanguage.mockImplementation(async (lang: string) => {
-      // Simulate the real loadLanguage behavior - this happens in the actual function
-      i18n.language = lang; // Update the language property
+      i18n.language = lang;
       return mockChangeLanguage(lang);
     });
   });
-  
-  it('renders all action buttons', () => {
+
+  it('renders onboarding buttons for first-time users and opens instructions modal', () => {
     const handlers = {
       onStartNewGame: jest.fn(),
       onLoadGame: jest.fn(),
-      onResumeGame: jest.fn(),
       onCreateSeason: jest.fn(),
       onViewStats: jest.fn(),
     };
@@ -82,31 +74,54 @@ describe('StartScreen', () => {
         <StartScreen
           onStartNewGame={handlers.onStartNewGame}
           onLoadGame={handlers.onLoadGame}
-          onResumeGame={handlers.onResumeGame}
-          canResume
-          isAuthenticated
           onCreateSeason={handlers.onCreateSeason}
           onViewStats={handlers.onViewStats}
+          isAuthenticated
+          isFirstTimeUser
         />
       </AuthProvider>
     );
 
-    expect(screen.getByRole('button', { name: 'Resume Last Game' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start New Game' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Load Game' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Season/Tournament' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View Stats' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Finnish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'How It Works' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Start New Game' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Get Started' }));
     expect(handlers.onStartNewGame).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Resume Last Game' }));
-    expect(handlers.onResumeGame).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'How It Works' }));
+    expect(
+      screen.getByRole('heading', { name: 'instructionsModal.title' })
+    ).toBeInTheDocument();
+  });
 
-    // Test that language buttons are clickable (detailed language change logic tested elsewhere)
-    fireEvent.click(screen.getByRole('button', { name: 'Finnish' }));
-    // Button click should not throw error - language change is complex async behavior
+  it('disables actions when data is missing in experienced mode', () => {
+    const handlers = {
+      onStartNewGame: jest.fn(),
+      onLoadGame: jest.fn(),
+      onCreateSeason: jest.fn(),
+      onViewStats: jest.fn(),
+    };
+
+    render(
+      <AuthProvider>
+        <StartScreen
+          onStartNewGame={handlers.onStartNewGame}
+          onLoadGame={handlers.onLoadGame}
+          onCreateSeason={handlers.onCreateSeason}
+          onViewStats={handlers.onViewStats}
+          isAuthenticated
+          isFirstTimeUser={false}
+          hasPlayers={false}
+          hasSavedGames={false}
+          hasSeasonsTournaments={false}
+        />
+      </AuthProvider>
+    );
+
+    expect(screen.getByRole('button', { name: 'Start New Game' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Load Game' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create Season/Tournament' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'View Stats' })).toBeDisabled();
   });
 });
+

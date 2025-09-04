@@ -8,6 +8,7 @@ import {
   getAppSettings,
 } from '@/utils/appSettings';
 import { AuthModal } from '@/components/auth/AuthModal';
+import InstructionsModal from '@/components/InstructionsModal';
 import { HiOutlineArrowRightOnRectangle, HiOutlineUserPlus, HiCheck } from 'react-icons/hi2';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +47,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [userMode, setUserMode] = useState<'first-time' | 'experienced'>(
+    _isFirstTimeUser ? 'first-time' : 'experienced'
+  );
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const didInitializeLanguageRef = useRef<boolean>(false);
 
@@ -94,6 +99,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
       return () => clearTimeout(timer);
     }
   }, [showLoginSuccess]);
+
+  useEffect(() => {
+    setUserMode(_isFirstTimeUser ? 'first-time' : 'experienced');
+  }, [_isFirstTimeUser]);
 
   const buttonFull = 'w-64 sm:w-64 md:w-56';
 
@@ -183,6 +192,19 @@ const StartScreen: React.FC<StartScreenProps> = ({
               </span>
             </Button>
           </div>
+        ) : userMode === 'first-time' ? (
+          <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
+            <Button className={buttonFull} variant="primary" onClick={onStartNewGame}>
+              {t('startScreen.getStarted', 'Get Started')}
+            </Button>
+            <Button
+              className={buttonFull}
+              variant="secondary"
+              onClick={() => setShowInstructions(true)}
+            >
+              {t('startScreen.howItWorks', 'How It Works')}
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-h-[60vh] sm:max-h-none overflow-y-auto">
             {(() => {
@@ -193,16 +215,36 @@ const StartScreen: React.FC<StartScreenProps> = ({
                 </Button>
               ) : null;
             })()}
-            <Button className={buttonFull} variant="primary" onClick={onStartNewGame}>
+            <Button
+              className={buttonFull}
+              variant="primary"
+              onClick={onStartNewGame}
+              disabled={!_hasPlayers}
+            >
               {t('startScreen.startNewGame', 'Start New Game')}
             </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onLoadGame}>
+            <Button
+              className={buttonFull}
+              variant="secondary"
+              onClick={onLoadGame}
+              disabled={!_hasSavedGames}
+            >
               {t('startScreen.loadGame', 'Load Game')}
             </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onCreateSeason}>
+            <Button
+              className={buttonFull}
+              variant="secondary"
+              onClick={onCreateSeason}
+              disabled={!_hasPlayers}
+            >
               {t('startScreen.createSeasonTournament', 'Create Season/Tournament')}
             </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onViewStats}>
+            <Button
+              className={buttonFull}
+              variant="secondary"
+              onClick={onViewStats}
+              disabled={!_hasSeasonsTournaments && !_hasSavedGames}
+            >
               {t('startScreen.viewStats', 'View Stats')}
             </Button>
             <Button
@@ -238,6 +280,11 @@ const StartScreen: React.FC<StartScreenProps> = ({
           defaultMode={authModalMode}
         />
       )}
+
+      <InstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
+      />
 
       <div className="absolute left-1/2 -translate-x-1/2 z-20 flex items-center bottom-8 md:bottom-6">
         <div className="flex rounded-lg bg-slate-800/70 border border-slate-600 backdrop-blur-sm overflow-hidden">

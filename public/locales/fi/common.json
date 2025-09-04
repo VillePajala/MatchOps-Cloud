@@ -391,7 +391,9 @@
     "languageEnglish": "Englanti",
     "languageFinnish": "Suomi",
     "createSeasonTournament": "Luo kausi/turnaus",
-    "viewStats": "Tarkastele tilastoja"
+    "viewStats": "Tarkastele tilastoja",
+    "getStarted": "Aloita",
+    "howItWorks": "Näin se toimii"
   },
   "seasonTournamentModal": {
     "confirmDelete": "Haluatko varmasti poistaa {{name}}?",
