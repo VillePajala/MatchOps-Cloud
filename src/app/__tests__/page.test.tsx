@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@/__tests__/test-utils';
 import Home from '../page';
 import { useAuth } from '@/context/AuthContext';
-import { useResumeAvailability } from '@/hooks/useResumeAvailability';
+import { useAppStateDetection } from '@/hooks/useAppStateDetection';
 import { useAuthStorage } from '@/hooks/useAuthStorage';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -10,7 +10,7 @@ import logger from '@/utils/logger';
 
 // Mock all dependencies
 jest.mock('@/context/AuthContext');
-jest.mock('@/hooks/useResumeAvailability');
+jest.mock('@/hooks/useAppStateDetection');
 jest.mock('@/hooks/useAuthStorage');
 jest.mock('next/navigation');
 jest.mock('@/lib/supabase');
@@ -126,7 +126,13 @@ describe('Home Page', () => {
     (logger.error as jest.Mock) = jest.fn();
     
     (useAuth as jest.Mock).mockReturnValue(mockAuth);
-    (useResumeAvailability as jest.Mock).mockReturnValue(false);
+    (useAppStateDetection as jest.Mock).mockReturnValue({
+      canResume: false,
+      hasPlayers: false,
+      hasSavedGames: false,
+      hasSeasonsTournaments: false,
+      isFirstTimeUser: true,
+    });
     (useAuthStorage as jest.Mock).mockReturnValue({});
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
@@ -173,7 +179,7 @@ describe('Home Page', () => {
       render(<Home />);
       
       expect(useAuth).toHaveBeenCalled();
-      expect(useResumeAvailability).toHaveBeenCalled();
+      expect(useAppStateDetection).toHaveBeenCalled();
       expect(useAuthStorage).toHaveBeenCalled();
     });
   });
@@ -234,7 +240,7 @@ describe('Home Page', () => {
     it('should handle resume availability changes', () => {
       const { rerender } = render(<Home />);
       
-      expect(useResumeAvailability).toHaveBeenCalledWith(null);
+      expect(useAppStateDetection).toHaveBeenCalledWith(null);
       
       // User becomes authenticated
       const authenticatedAuth = { ...mockAuth, user: { id: '123' } };
@@ -242,7 +248,7 @@ describe('Home Page', () => {
       
       rerender(<Home />);
       
-      expect(useResumeAvailability).toHaveBeenCalledWith({ id: '123' });
+      expect(useAppStateDetection).toHaveBeenCalledWith({ id: '123' });
     });
   });
 
@@ -535,11 +541,17 @@ describe('Home Page', () => {
       });
 
       expect(logger.debug).toHaveBeenCalledWith(
-        '[Home] Rendering with canResume:', 
-        false, 
-        'screen:', 
-        'start', 
-        'user:', 
+        '[Home] Rendering with detection:',
+        expect.objectContaining({
+          canResume: false,
+          hasPlayers: false,
+          hasSavedGames: false,
+          hasSeasonsTournaments: false,
+          isFirstTimeUser: true,
+        }),
+        'screen:',
+        'start',
+        'user:',
         false
       );
     });

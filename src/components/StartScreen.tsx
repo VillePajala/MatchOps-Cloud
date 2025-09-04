@@ -8,11 +8,15 @@ import {
   getAppSettings,
 } from '@/utils/appSettings';
 import { AuthModal } from '@/components/auth/AuthModal';
-import InstructionsModal from '@/components/InstructionsModal';
+import dynamic from 'next/dynamic';
 import { HiOutlineArrowRightOnRectangle, HiOutlineUserPlus, HiCheck } from 'react-icons/hi2';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import logger from '@/utils/logger';
+
+const InstructionsModal = dynamic(() => import('@/components/InstructionsModal'), {
+  ssr: false,
+});
 
 interface StartScreenProps {
   onStartNewGame: () => void;
@@ -220,6 +224,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
               variant="primary"
               onClick={onStartNewGame}
               disabled={!_hasPlayers}
+              title={!_hasPlayers ? t('startScreen.noPlayersHint', 'Add players to start a game') : undefined}
             >
               {t('startScreen.startNewGame', 'Start New Game')}
             </Button>
@@ -228,6 +233,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
               variant="secondary"
               onClick={onLoadGame}
               disabled={!_hasSavedGames}
+              title={!_hasSavedGames ? t('startScreen.noSavedGamesHint', 'No saved games available') : undefined}
             >
               {t('startScreen.loadGame', 'Load Game')}
             </Button>
@@ -236,6 +242,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
               variant="secondary"
               onClick={onCreateSeason}
               disabled={!_hasPlayers}
+              title={!_hasPlayers ? t('startScreen.noPlayersHint', 'Add players to create a season') : undefined}
             >
               {t('startScreen.createSeasonTournament', 'Create Season/Tournament')}
             </Button>
@@ -243,7 +250,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
               className={buttonFull}
               variant="secondary"
               onClick={onViewStats}
-              disabled={!_hasSeasonsTournaments && !_hasSavedGames}
+              disabled={!(_hasSeasonsTournaments || _hasSavedGames)}
+              title={!(_hasSeasonsTournaments || _hasSavedGames)
+                ? t('startScreen.noStatsHint', 'Save games or create a season to view stats')
+                : undefined}
             >
               {t('startScreen.viewStats', 'View Stats')}
             </Button>

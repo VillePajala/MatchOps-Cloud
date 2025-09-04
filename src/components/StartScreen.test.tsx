@@ -61,7 +61,7 @@ describe('StartScreen', () => {
     });
   });
 
-  it('renders onboarding buttons for first-time users and opens instructions modal', () => {
+  it('renders onboarding buttons for first-time users and opens instructions modal', async () => {
     const handlers = {
       onStartNewGame: jest.fn(),
       onLoadGame: jest.fn(),
@@ -90,7 +90,7 @@ describe('StartScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'How It Works' }));
     expect(
-      screen.getByRole('heading', { name: 'instructionsModal.title' })
+      await screen.findByRole('heading', { name: 'instructionsModal.title' })
     ).toBeInTheDocument();
   });
 
@@ -122,6 +122,32 @@ describe('StartScreen', () => {
     expect(screen.getByRole('button', { name: 'Load Game' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Create Season/Tournament' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'View Stats' })).toBeDisabled();
+  });
+
+  it('switches language when language buttons are clicked', () => {
+    const handlers = {
+      onStartNewGame: jest.fn(),
+      onLoadGame: jest.fn(),
+      onCreateSeason: jest.fn(),
+      onViewStats: jest.fn(),
+    };
+
+    render(
+      <AuthProvider>
+        <StartScreen
+          onStartNewGame={handlers.onStartNewGame}
+          onLoadGame={handlers.onLoadGame}
+          onCreateSeason={handlers.onCreateSeason}
+          onViewStats={handlers.onViewStats}
+          isAuthenticated
+        />
+      </AuthProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Finnish' }));
+    expect(
+      screen.getByRole('button', { name: 'Finnish' })
+    ).toHaveClass('bg-indigo-600');
   });
 });
 
