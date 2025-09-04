@@ -560,6 +560,7 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     }
   }, [
     initialAction,
+    validateNewGameCreation,
     newGameSetupModal,
     loadGameModal,
     seasonTournamentModal,

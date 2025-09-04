@@ -35,10 +35,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
   onViewStats,
   canResume = false,
   isAuthenticated = false,
-  hasPlayers = false,
-  hasSavedGames = false,
-  hasSeasonsTournaments = false,
-  isFirstTimeUser = true,
+  hasPlayers: _hasPlayers = false,
+  hasSavedGames: _hasSavedGames = false,
+  hasSeasonsTournaments: _hasSeasonsTournaments = false,
+  isFirstTimeUser: _isFirstTimeUser = true,
 }) => {
   const { t } = useTranslation();
   const { signOut } = useAuth();

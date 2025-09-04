@@ -94,7 +94,7 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
         isLoading: false,
       });
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
