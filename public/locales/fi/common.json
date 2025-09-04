@@ -35,6 +35,7 @@
   "controlBar.menu.title": "Valikko",
   "controlBar.saveGame": "Pikatallennus",
   "controlBar.newGameButton": "Aloita uusi ottelu",
+  "controlBar.noPlayersForNewGame": "Tarvitset vähintään yhden pelaajan kokoonpanossa luodaksesi ottelun. Haluatko lisätä pelaajia nyt?",
   "controlBar.gameSettingsButton": "Otteluasetukset",
   "controlBar.manageRoster": "Kokoonpanoasetukset",
   "controlBar.manageSeasonsAndTournaments": "Hallinnoi kausia ja turnauksia",

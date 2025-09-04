@@ -5,7 +5,7 @@ import HomePage from '@/components/HomePage';
 import StartScreen from '@/components/StartScreen';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useState, useEffect, Suspense } from 'react';
-import { useResumeAvailability } from '@/hooks/useResumeAvailability';
+import { useAppStateDetection } from '@/hooks/useAppStateDetection';
 import { useAuthStorage } from '@/hooks/useAuthStorage';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -144,7 +144,7 @@ export default function Home() {
   const [initialAction, setInitialAction] = useState<'newGame' | 'loadGame' | 'resumeGame' | 'season' | 'stats' | null>(null);
   // Get auth state to listen for logout
   const { user } = useAuth();
-  const canResume = useResumeAvailability(user);
+  const detection = useAppStateDetection(user);
   
   // Sync auth state with storage manager
   useAuthStorage();
@@ -165,7 +165,7 @@ export default function Home() {
     setScreen('home');
   };
 
-  logger.debug('[Home] Rendering with canResume:', canResume, 'screen:', screen, 'user:', !!user);
+  logger.debug('[Home] Rendering with detection:', detection, 'screen:', screen, 'user:', !!user);
   
   return (
     <div className="min-h-screen">
@@ -177,13 +177,21 @@ export default function Home() {
           onStartNewGame={() => handleAction('newGame')}
           onLoadGame={() => handleAction('loadGame')}
           onResumeGame={() => handleAction('resumeGame')}
-          canResume={canResume}
+          canResume={detection.canResume}
           onCreateSeason={() => handleAction('season')}
           onViewStats={() => handleAction('stats')}
           isAuthenticated={!!user}
+          hasPlayers={detection.hasPlayers}
+          hasSavedGames={detection.hasSavedGames}
+          hasSeasonsTournaments={detection.hasSeasonsTournaments}
+          isFirstTimeUser={detection.isFirstTimeUser}
         />
       ) : (
-        <HomePage initialAction={initialAction ?? undefined} skipInitialSetup />
+        <HomePage 
+          initialAction={initialAction ?? undefined} 
+          skipInitialSetup 
+          appStateDetection={detection}
+        />
       )}
       
       {/* Email Verification Success Toast - wrapped in Suspense */}
