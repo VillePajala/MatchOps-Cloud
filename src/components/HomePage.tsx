@@ -67,6 +67,7 @@ import {
 // import { deleteTournament as utilDeleteTournament, updateTournament as utilUpdateTournament, addTournament as utilAddTournament } from '@/utils/tournaments';
 // Import Player from types directory
 import { Player, Season, Tournament } from '@/types';
+import type { AppStateDetection } from '@/hooks/useAppStateDetection';
 // Import saveMasterRoster utility
 import type { AppState, SavedGamesCollection } from "@/types";
 // Removed - now handled by useGameDataManager: 
@@ -159,9 +160,10 @@ const initialState: AppState = {
 interface HomePageProps {
   initialAction?: 'newGame' | 'loadGame' | 'resumeGame' | 'season' | 'stats';
   skipInitialSetup?: boolean;
+  appStateDetection?: AppStateDetection;
 }
 
-function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
+function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }: HomePageProps) {
   const { t } = useTranslation(); // Get translation function
   const { signOut, user } = useAuth();
   // Removed - now handled by useGameDataManager: 
@@ -509,13 +511,36 @@ function HomePage({ initialAction, skipInitialSetup = false }: HomePageProps) {
   const [showLargeTimerOverlay, setShowLargeTimerOverlay] = useState<boolean>(false); // State for overlay visibility
   const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState<boolean>(false);
 
+  // Helper function to validate new game creation
+  const validateNewGameCreation = useCallback((): boolean => {
+    // If no detection data available, allow creation (fallback behavior)
+    if (!appStateDetection) return true;
+    
+    // Check if user has players
+    if (!appStateDetection.hasPlayers) {
+      const shouldOpenRoster = window.confirm(
+        t('controlBar.noPlayersForNewGame', 
+          'You need at least one player in your roster to create a game. Would you like to add players now?')
+      );
+      
+      if (shouldOpenRoster) {
+        rosterSettingsModal.open();
+      }
+      return false; // Block game creation
+    }
+    
+    return true; // Allow game creation
+  }, [appStateDetection, t, rosterSettingsModal]);
+
   const hasHandledInitialActionRef = useRef(false);
   useEffect(() => {
     if (!initialAction || hasHandledInitialActionRef.current) return;
     hasHandledInitialActionRef.current = true;
     switch (initialAction) {
       case 'newGame':
-        newGameSetupModal.open();
+        if (validateNewGameCreation()) {
+          newGameSetupModal.open();
+        }
         break;
       case 'loadGame':
         loadGameModal.open();

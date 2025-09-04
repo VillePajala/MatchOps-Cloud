@@ -21,6 +21,10 @@ interface StartScreenProps {
   onViewStats: () => void;
   canResume?: boolean;
   isAuthenticated?: boolean;
+  hasPlayers?: boolean;
+  hasSavedGames?: boolean;
+  hasSeasonsTournaments?: boolean;
+  isFirstTimeUser?: boolean;
 }
 
 const StartScreen: React.FC<StartScreenProps> = ({
@@ -31,6 +35,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
   onViewStats,
   canResume = false,
   isAuthenticated = false,
+  hasPlayers = false,
+  hasSavedGames = false,
+  hasSeasonsTournaments = false,
+  isFirstTimeUser = true,
 }) => {
   const { t } = useTranslation();
   const { signOut } = useAuth();

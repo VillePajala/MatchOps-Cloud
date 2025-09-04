@@ -36,6 +36,7 @@
   "controlBar.menu.title": "Menu",
   "controlBar.saveGame": "Quick Save",
   "controlBar.newGameButton": "Start New Game",
+  "controlBar.noPlayersForNewGame": "You need at least one player in your roster to create a game. Would you like to add players now?",
   "controlBar.gameSettingsButton": "Game Settings",
   "controlBar.manageRoster": "Manage Roster",
   "controlBar.manageSeasonsAndTournaments": "Manage Seasons & Tournaments",
