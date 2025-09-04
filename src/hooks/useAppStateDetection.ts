@@ -12,6 +12,7 @@ export interface AppStateDetection {
   isFirstTimeUser: boolean;
   canResume: boolean;
   isLoading: boolean;
+  refreshDetection?: () => void;
 }
 
 /**
@@ -54,7 +55,7 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
 
       // Calculate detection state
       const hasPlayers = masterRoster.length > 0;
-      const savedGamesArray = Object.keys(savedGames);
+      const savedGamesArray = savedGames && typeof savedGames === 'object' ? Object.keys(savedGames) : [];
       const hasSavedGames = savedGamesArray.length > 0;
       const hasSeasonsTournaments = seasons.length > 0 || tournaments.length > 0;
 
@@ -121,7 +122,6 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
   // Expose refresh method via detection object for external use
   return {
     ...detection,
-    // @ts-ignore - Adding refresh method to return object
     refreshDetection,
   };
 }
