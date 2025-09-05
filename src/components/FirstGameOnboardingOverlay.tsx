@@ -11,6 +11,9 @@ const FOCUSABLE_SELECTOR = 'button, [tabindex]:not([tabindex="-1"])';
 interface FirstGameOnboardingOverlayProps {
   phase: 'no-players' | 'has-players' | 'tutorial';
   hasPlayers: boolean;
+  hasTeams: boolean;
+  hasSeasons: boolean;
+  hasTournaments: boolean;
   onCreateRoster: () => void;
   onCreateGame: () => void;
   onManageTeams?: () => void;
@@ -28,6 +31,9 @@ interface FirstGameOnboardingOverlayProps {
 const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = memo(({
   phase,
   hasPlayers: _hasPlayers,
+  hasTeams: _hasTeams,
+  hasSeasons: _hasSeasons,
+  hasTournaments: _hasTournaments,
   onCreateRoster,
   onCreateGame,
   onManageTeams,
