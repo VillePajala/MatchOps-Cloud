@@ -47,10 +47,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
   onViewStats,
   canResume = false,
   isAuthenticated = false,
-  hasPlayers: _hasPlayers = false,
-  hasSavedGames: _hasSavedGames = false,
-  hasSeasonsTournaments: _hasSeasonsTournaments = false,
-  isFirstTimeUser: _isFirstTimeUser = true,
+  hasPlayers: hasPlayersData = false,
+  hasSavedGames: hasSavedGamesData = false,
+  hasSeasonsTournaments: hasSeasonsTournamentsData = false,
+  isFirstTimeUser: isFirstTimeUserState = true,
 }) => {
   const { t } = useTranslation();
   const { signOut } = useAuth();
@@ -107,7 +107,6 @@ const StartScreen: React.FC<StartScreenProps> = ({
       return () => clearTimeout(timer);
     }
   }, [showLoginSuccess]);
-
 
   const buttonFull = 'w-64 sm:w-64 md:w-56';
 
@@ -186,8 +185,8 @@ const StartScreen: React.FC<StartScreenProps> = ({
           className={buttonFull}
           variant="primary"
           onClick={onStartNewGame}
-          disabled={!_hasPlayers}
-          title={!_hasPlayers ? t('startScreen.noPlayersHint', 'Add players to start a game') : undefined}
+          disabled={!hasPlayersData}
+          title={!hasPlayersData ? t('startScreen.noPlayersHint', 'Add players to start a game') : undefined}
         >
           {t('startScreen.startNewGame', 'Start New Game')}
         </Button>
@@ -195,8 +194,8 @@ const StartScreen: React.FC<StartScreenProps> = ({
           className={buttonFull}
           variant="secondary"
           onClick={onLoadGame}
-          disabled={!_hasSavedGames}
-          title={!_hasSavedGames ? t('startScreen.noSavedGamesHint', 'No saved games available') : undefined}
+          disabled={!hasSavedGamesData}
+          title={!hasSavedGamesData ? t('startScreen.noSavedGamesHint', 'No saved games available') : undefined}
         >
           {t('startScreen.loadGame', 'Load Game')}
         </Button>
@@ -204,8 +203,8 @@ const StartScreen: React.FC<StartScreenProps> = ({
           className={buttonFull}
           variant="secondary"
           onClick={onCreateSeason}
-          disabled={!_hasPlayers}
-          title={!_hasPlayers ? t('startScreen.noPlayersHint', 'Add players to create a season') : undefined}
+          disabled={!hasPlayersData}
+          title={!hasPlayersData ? t('startScreen.noPlayersHint', 'Add players to create a season') : undefined}
         >
           {t('startScreen.createSeasonTournament', 'Create Season/Tournament')}
         </Button>
@@ -213,8 +212,8 @@ const StartScreen: React.FC<StartScreenProps> = ({
           className={buttonFull}
           variant="secondary"
           onClick={onViewStats}
-          disabled={!(_hasSeasonsTournaments || _hasSavedGames)}
-          title={!(_hasSeasonsTournaments || _hasSavedGames)
+          disabled={!(hasSeasonsTournamentsData || hasSavedGamesData)}
+          title={!(hasSeasonsTournamentsData || hasSavedGamesData)
             ? t('startScreen.noStatsHint', 'Save games or create a season to view stats')
             : undefined}
         >
@@ -242,7 +241,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
       return renderAuthButtons();
     }
     
-    if (_isFirstTimeUser) {
+    if (isFirstTimeUserState) {
       return renderOnboardingButtons();
     }
     
