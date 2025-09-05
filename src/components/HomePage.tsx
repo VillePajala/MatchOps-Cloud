@@ -657,8 +657,8 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
           if (!appStateDetection.hasPlayers && !settings.firstGameOnboardingPhase1Completed) {
             shouldShowPhase = 'no-players';
           }
-          // Phase 2: Has players but no games - show if has players but no games and hasn't completed phase 2
-          else if (appStateDetection.hasPlayers && !appStateDetection.hasGames && !settings.firstGameOnboardingPhase2Completed) {
+          // Phase 2: Has players but no games - show if has players but no saved games and hasn't completed phase 2
+          else if (appStateDetection.hasPlayers && !appStateDetection.hasSavedGames && !settings.firstGameOnboardingPhase2Completed) {
             shouldShowPhase = 'has-players';
           }
           
@@ -685,7 +685,7 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
         timer = null; // Explicit nullification
       }
     };
-  }, [appStateDetection?.isFirstTimeUser, appStateDetection?.hasPlayers, appStateDetection?.hasGames, showLargeTimerOverlay]);
+  }, [appStateDetection?.isFirstTimeUser, appStateDetection?.hasPlayers, appStateDetection?.hasSavedGames, showLargeTimerOverlay]);
   
   // Tutorial phase logic - show when entering first real game
   useEffect(() => {

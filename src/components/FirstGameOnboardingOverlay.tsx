@@ -3,7 +3,7 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button';
-import { HiOutlineUsers, HiOutlinePlayCircle, HiOutlineXMark, HiOutlineCog6Tooth, HiOutlineTrophy } from 'react-icons/hi2';
+import { HiOutlineUsers, HiOutlinePlayCircle, HiOutlineXMark, HiOutlineTrophy } from 'react-icons/hi2';
 
 // Constants for maintainability
 const FOCUSABLE_SELECTOR = '[data-onboarding-overlay] button, [data-onboarding-overlay] [tabindex]:not([tabindex="-1"])';
@@ -29,10 +29,10 @@ interface FirstGameOnboardingOverlayProps {
 
 const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = memo(({
   phase,
-  hasPlayers,
-  hasTeams = false,
-  hasSeasons = false,
-  hasTournaments = false,
+  hasPlayers: _hasPlayers,
+  hasTeams: _hasTeams = false,
+  hasSeasons: _hasSeasons = false,
+  hasTournaments: _hasTournaments = false,
   onCreateRoster,
   onCreateGame,
   onManageTeams,
