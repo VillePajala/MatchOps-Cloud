@@ -81,11 +81,18 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
       
       // Remove unnecessary delay - modern auth systems are stable
 
-      // Helper function to add timeout to prevent hanging on Supabase calls
+      // Helper function to add timeout to prevent hanging on Supabase calls with cleanup
       const withTimeout = <T>(promise: Promise<T>, timeoutMs = 3000, fallback: T): Promise<T> => {
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<T>((resolve) => {
+          timeoutId = setTimeout(() => resolve(fallback), timeoutMs);
+        });
+
         return Promise.race([
-          promise,
-          new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs))
+          promise.finally(() => {
+            if (timeoutId) clearTimeout(timeoutId);
+          }),
+          timeoutPromise
         ]);
       };
 

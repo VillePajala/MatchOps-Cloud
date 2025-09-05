@@ -14,9 +14,15 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import logger from '@/utils/logger';
 
-const InstructionsModal = dynamic(() => import('@/components/InstructionsModal'), {
-  ssr: false,
-});
+const InstructionsModal = dynamic(
+  () => import('@/components/InstructionsModal').catch(() => ({
+    default: () => <div className="text-red-400">Failed to load instructions. Please refresh the page.</div>
+  })), 
+  {
+    ssr: false,
+    loading: () => <div className="text-slate-300 text-center p-4">Loading instructions...</div>,
+  }
+);
 
 interface StartScreenProps {
   // Action handlers
