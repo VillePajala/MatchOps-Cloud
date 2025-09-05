@@ -21,6 +21,7 @@ import SeasonTournamentManagementModal from '@/components/SeasonTournamentManage
 import InstructionsModal from '@/components/InstructionsModal';
 import PlayerAssessmentModal from '@/components/PlayerAssessmentModal';
 import FirstGameOnboardingOverlay from '@/components/FirstGameOnboardingOverlay';
+import ErrorBoundary from '@/components/ErrorBoundary';
 // PHASE 2: Progressive rendering components  
 import { GameLoadingSkeleton } from '@/components/Skeleton';
 
@@ -517,6 +518,9 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
   // --- First Game Onboarding Overlay State ---
   const [showFirstGameOnboarding, setShowFirstGameOnboarding] = useState<boolean>(false);
 
+  // Constants for onboarding configuration
+  const ONBOARDING_DISPLAY_DELAY = 1000; // ms delay before showing overlay
+
   // Helper function to validate new game creation
   const validateNewGameCreation = useCallback((): boolean => {
     // If no detection data available, allow creation (fallback behavior)
@@ -608,6 +612,8 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
 
   // --- First Game Onboarding Logic ---
   useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
     const checkOnboardingStatus = async () => {
       // Only show onboarding overlay for first-time users who haven't completed or dismissed it
       if (appStateDetection?.isFirstTimeUser && !showLargeTimerOverlay) {
@@ -620,11 +626,9 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
           }
           
           // Small delay to allow the main interface to render first
-          const timer = setTimeout(() => {
+          timer = setTimeout(() => {
             setShowFirstGameOnboarding(true);
-          }, 1000);
-          
-          return () => clearTimeout(timer);
+          }, ONBOARDING_DISPLAY_DELAY);
         } catch (error) {
           logger.error('Error checking onboarding status:', error);
         }
@@ -632,6 +636,13 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     };
     
     checkOnboardingStatus();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [appStateDetection?.isFirstTimeUser, showLargeTimerOverlay]);
 
   // --- Modal States handled via context ---
@@ -2435,13 +2446,23 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
             
             {/* First Game Onboarding Overlay */}
             {showFirstGameOnboarding && (
-              <FirstGameOnboardingOverlay
-                hasPlayers={appStateDetection?.hasPlayers ?? false}
-                onSetupRoster={handleOnboardingSetupRoster}
-                onCreateNewGame={handleOnboardingCreateNewGame}
-                onDismiss={handleOnboardingDismiss}
-                isVisible={showFirstGameOnboarding}
-              />
+              <ErrorBoundary
+                fallback={
+                  <div className="absolute inset-0 flex items-center justify-center z-[70] bg-black/40">
+                    <div className="bg-slate-800 rounded-lg p-4 text-slate-200">
+                      Failed to load onboarding overlay
+                    </div>
+                  </div>
+                }
+              >
+                <FirstGameOnboardingOverlay
+                  hasPlayers={appStateDetection?.hasPlayers ?? false}
+                  onSetupRoster={handleOnboardingSetupRoster}
+                  onCreateNewGame={handleOnboardingCreateNewGame}
+                  onDismiss={handleOnboardingDismiss}
+                  isVisible={showFirstGameOnboarding}
+                />
+              </ErrorBoundary>
             )}
           </>
         )}

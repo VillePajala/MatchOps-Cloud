@@ -5,6 +5,11 @@ import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button';
 import { HiOutlineUsers, HiOutlinePlayCircle, HiOutlineXMark } from 'react-icons/hi2';
 
+// Constants for maintainability
+const Z_INDEX_ONBOARDING = 70;
+const FOCUSABLE_SELECTOR = '[data-onboarding-overlay] button, [data-onboarding-overlay] [tabindex]:not([tabindex="-1"])';
+const ANIMATION_DURATION = 300;
+
 interface FirstGameOnboardingOverlayProps {
   hasPlayers: boolean;
   onSetupRoster: () => void;
@@ -45,9 +50,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
       document.addEventListener('keydown', handleEscape);
       
       // Focus trap - focus the first interactive element
-      const focusableElements = document.querySelectorAll(
-        '[data-onboarding-overlay] button, [data-onboarding-overlay] [tabindex]:not([tabindex="-1"])'
-      );
+      const focusableElements = document.querySelectorAll(FOCUSABLE_SELECTOR);
       const firstElement = focusableElements[0] as HTMLElement;
       if (firstElement) {
         firstElement.focus();
@@ -61,6 +64,9 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
       className="absolute inset-0 flex items-center justify-center z-[70] bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-300"
       onClick={handleBackdropClick}
       data-onboarding-overlay
@@ -88,7 +94,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
                 </div>
               </div>
               
-              <h2 className="text-xl font-semibold text-slate-100 mb-2">
+              <h2 id="onboarding-title" className="text-xl font-semibold text-slate-100 mb-2">
                 {t('firstGame.titleNoPlayers', 'Ready to set up your team?')}
               </h2>
               
@@ -126,7 +132,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
                 </div>
               </div>
               
-              <h2 className="text-xl font-semibold text-slate-100 mb-2">
+              <h2 id="onboarding-title" className="text-xl font-semibold text-slate-100 mb-2">
                 {t('firstGame.titleHasPlayers', 'Ready to create your first match!')}
               </h2>
               
