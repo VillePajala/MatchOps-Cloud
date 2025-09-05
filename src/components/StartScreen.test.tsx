@@ -149,5 +149,221 @@ describe('StartScreen', () => {
       screen.getByRole('button', { name: 'Finnish' })
     ).toHaveClass('bg-indigo-600');
   });
+
+  describe('Disabled states and tooltips', () => {
+    const handlers = {
+      onStartNewGame: jest.fn(),
+      onLoadGame: jest.fn(),
+      onCreateSeason: jest.fn(),
+      onViewStats: jest.fn(),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('shows tooltip for Start New Game when no players exist', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={false}
+          />
+        </AuthProvider>
+      );
+
+      const startButton = screen.getByRole('button', { name: 'Start New Game' });
+      expect(startButton).toBeDisabled();
+      expect(startButton).toHaveAttribute('title', 'Add players to start a game');
+    });
+
+    it('shows tooltip for Load Game when no saved games exist', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+            hasSavedGames={false}
+          />
+        </AuthProvider>
+      );
+
+      const loadButton = screen.getByRole('button', { name: 'Load Game' });
+      expect(loadButton).toBeDisabled();
+      expect(loadButton).toHaveAttribute('title', 'No saved games available');
+    });
+
+    it('shows tooltip for Create Season when no players exist', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={false}
+          />
+        </AuthProvider>
+      );
+
+      const seasonButton = screen.getByRole('button', { name: 'Create Season/Tournament' });
+      expect(seasonButton).toBeDisabled();
+      expect(seasonButton).toHaveAttribute('title', 'Add players to create a season');
+    });
+
+    it('shows tooltip for View Stats when no data exists', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+            hasSavedGames={false}
+            hasSeasonsTournaments={false}
+          />
+        </AuthProvider>
+      );
+
+      const statsButton = screen.getByRole('button', { name: 'View Stats' });
+      expect(statsButton).toBeDisabled();
+      expect(statsButton).toHaveAttribute('title', 'Save games or create a season to view stats');
+    });
+
+    it('enables buttons when prerequisite data exists', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+            hasSavedGames={true}
+            hasSeasonsTournaments={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'Start New Game' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Load Game' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Create Season/Tournament' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'View Stats' })).not.toBeDisabled();
+    });
+
+    it('enables View Stats when only saved games exist', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+            hasSavedGames={true}
+            hasSeasonsTournaments={false}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'View Stats' })).not.toBeDisabled();
+    });
+
+    it('enables View Stats when only seasons/tournaments exist', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+            hasSavedGames={false}
+            hasSeasonsTournaments={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'View Stats' })).not.toBeDisabled();
+    });
+  });
+
+  describe('User mode switching', () => {
+    const handlers = {
+      onStartNewGame: jest.fn(),
+      onLoadGame: jest.fn(),
+      onCreateSeason: jest.fn(),
+      onViewStats: jest.fn(),
+    };
+
+    it('shows first-time user interface for new users', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'How It Works' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Start New Game' })).not.toBeInTheDocument();
+    });
+
+    it('shows experienced user interface for returning users', () => {
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            isAuthenticated
+            isFirstTimeUser={false}
+            hasPlayers={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'Start New Game' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Get Started' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'How It Works' })).not.toBeInTheDocument();
+    });
+
+    it('shows resume button when user can resume and callback is provided', () => {
+      const onResumeGame = jest.fn();
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            onResumeGame={onResumeGame}
+            isAuthenticated
+            isFirstTimeUser={false}
+            canResume={true}
+            hasPlayers={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByRole('button', { name: 'Resume Last Game' })).toBeInTheDocument();
+    });
+
+    it('hides resume button when user cannot resume', () => {
+      const onResumeGame = jest.fn();
+      render(
+        <AuthProvider>
+          <StartScreen
+            {...handlers}
+            onResumeGame={onResumeGame}
+            isAuthenticated
+            isFirstTimeUser={false}
+            canResume={false}
+            hasPlayers={true}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.queryByRole('button', { name: 'Resume Last Game' })).not.toBeInTheDocument();
+    });
+  });
 });
 
