@@ -485,6 +485,32 @@
     "noSavedGamesHint": "No saved games available",
     "noStatsHint": "Save games or create a season to view stats"
   },
+  "firstGame": {
+    "phase1": {
+      "title": "Ready to get started?",
+      "message": "Add players first so you can create your first team and match.",
+      "createRoster": "Create lineup"
+    },
+    "phase2": {
+      "title": "All ready for your first match!",
+      "message": "If you want, you can create your first team, tournament or season.",
+      "createFirstMatch": "Create first match",
+      "manageTeams": "Manage teams", 
+      "createSeasonTournament": "Create season/tournament first"
+    },
+    "tutorial": {
+      "title": "Welcome to your first match!",
+      "subtitle": "Let's quickly go through the basics",
+      "playerSelection": "Player selection (top bar)",
+      "steps": {
+        "selectPlayer": "Tap player disc to activate player",
+        "setGoalie": "When player is selected, press shield icon to set as goalie",
+        "placePlayer": "With player selected, tap field to place player"
+      },
+      "back": "Back",
+      "next": "Next"
+    }
+  },
   "seasonTournamentModal": {
     "confirmDelete": "Are you sure you want to delete {{name}}?",
     "newSeasonPlaceholder": "Enter new season name...",

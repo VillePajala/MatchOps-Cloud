@@ -21,6 +21,10 @@ export interface AppSettings {
   // Session/Security settings
   deviceFingerprint?: string;
   sessionActivity?: Record<string, unknown>;
+  // Onboarding settings - three-phase system
+  firstGameOnboardingPhase1Completed?: boolean;
+  firstGameOnboardingPhase2Completed?: boolean;
+  firstGameTutorialCompleted?: boolean;
 }
 
 /**
@@ -44,6 +48,10 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   // Session/Security defaults
   deviceFingerprint: undefined,
   sessionActivity: {},
+  // Onboarding defaults - three-phase system
+  firstGameOnboardingPhase1Completed: false,
+  firstGameOnboardingPhase2Completed: false,
+  firstGameTutorialCompleted: false,
 };
 
 /**
