@@ -399,14 +399,30 @@
     "noStatsHint": "Tallenna pelejä tai luo kausi nähdäksesi tilastot"
   },
   "firstGame": {
-    "titleNoPlayers": "Valmis perustamaan joukkueesi?",
-    "titleHasPlayers": "Valmis luomaan ensimmäisen ottelun!",
-    "messageNoPlayers": "Aloita lisäämällä pelaajia rosteriin. Tarvitset vähintään yhden pelaajan luodaksesi pelin.",
-    "messageHasPlayers": "Pelaajat ovat valmiina! Luo ensimmäinen ottelu aloittaaksesi pelin tilastojen ja pelaajien suorituskyvyn seurannan.",
-    "setupRoster": "Perusta joukkue",
-    "createNewGame": "Luo uusi peli",
-    "skipForNow": "Ohita toistaiseksi",
-    "maybeLater": "Ehkä myöhemmin"
+    "phase1": {
+      "title": "Valmis aloittamaan?",
+      "message": "Lisää ensin pelaajia, jotta voit luoda ensimmäisen joukkuesi ja ottelusi.",
+      "createRoster": "Luo kokoonpano"
+    },
+    "phase2": {
+      "title": "Kaikki valmista ensimmäiseen otteluun!",
+      "message": "Haluatseesi voit luoda ensimmäisen joukkuesi, turnauksei tai kautesi.",
+      "createFirstMatch": "Luo ensimmäinen ottelu",
+      "manageTeams": "Hallinnoi joukkueita", 
+      "createSeasonTournament": "Luo ensin kausi/turnaus"
+    },
+    "tutorial": {
+      "title": "Tervetuloa ensimmäiseen otteluusi!",
+      "subtitle": "Käydään nopeastit läpi perustoimimat",
+      "playerSelection": "Pelaajien valinta (yläpalkki)",
+      "steps": {
+        "selectPlayer": "Napeauta pelaajekiekkoa aktivoidaaksei pelaaja",
+        "setGoalie": "Kun pelaaja on valiituna, paina kilven kuvaa asettaaksi hänet maalivahdoksi",
+        "placePlayer": "Pelaajan ollessa valittuna, napauta kenttää sijoittaksesei pelaaja"
+      },
+      "back": "Takaisin",
+      "next": "Seuraava"
+    }
   },
   "seasonTournamentModal": {
     "confirmDelete": "Haluatko varmasti poistaa {{name}}?",

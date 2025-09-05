@@ -16,9 +16,10 @@ beforeEach(() => {
 
 // Mock props
 const defaultProps = {
+  phase: 'no-players' as const,
   hasPlayers: false,
-  onSetupRoster: jest.fn(),
-  onCreateNewGame: jest.fn(),
+  onCreateRoster: jest.fn(),
+  onCreateGame: jest.fn(),
   onDismiss: jest.fn(),
   isVisible: true,
 };
@@ -36,72 +37,143 @@ describe('FirstGameOnboardingOverlay', () => {
     });
   });
 
-  describe('No Players State', () => {
-    it('renders setup roster content when hasPlayers is false', () => {
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
+  describe('Phase 1: No Players State', () => {
+    it('renders phase 1 content when phase is no-players', () => {
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="no-players" />);
       
-      expect(screen.getByText('Ready to set up your team?')).toBeInTheDocument();
-      expect(screen.getByText("Start by adding players to your roster. You'll need at least one player to create a game.")).toBeInTheDocument();
-      expect(screen.getByText('Set Up Team Roster')).toBeInTheDocument();
+      expect(screen.getByText('Valmis aloittamaan?')).toBeInTheDocument();
+      expect(screen.getByText('Lisää ensin pelaajia, jotta voit luoda ensimmäisen joukkuesi ja ottelusi.')).toBeInTheDocument();
+      expect(screen.getByText('Luo kokoonpano')).toBeInTheDocument();
     });
 
-    it('calls onSetupRoster and onDismiss when setup roster button is clicked', async () => {
+    it('calls onCreateRoster and onDismiss when create roster button is clicked', async () => {
       const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="no-players" />);
       
-      const setupButton = screen.getByText('Set Up Team Roster');
-      await user.click(setupButton);
+      const createButton = screen.getByText('Luo kokoonpano');
+      await user.click(createButton);
       
-      expect(defaultProps.onSetupRoster).toHaveBeenCalledTimes(1);
-      expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onDismiss when skip button is clicked', async () => {
-      const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
-      
-      const skipButton = screen.getByText('Skip for now');
-      await user.click(skipButton);
-      
+      expect(defaultProps.onCreateRoster).toHaveBeenCalledTimes(1);
       expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Has Players State', () => {
-    const propsWithPlayers = { ...defaultProps, hasPlayers: true };
+  describe('Phase 2: Has Players State', () => {
+    const phase2Props = { ...defaultProps, phase: 'has-players' as const, hasPlayers: true };
 
-    it('renders create game content when hasPlayers is true', () => {
-      render(<FirstGameOnboardingOverlay {...propsWithPlayers} />);
+    it('renders phase 2 content when phase is has-players', () => {
+      render(<FirstGameOnboardingOverlay {...phase2Props} />);
       
-      expect(screen.getByText('Ready to create your first match!')).toBeInTheDocument();
-      expect(screen.getByText('You have players ready! Create your first match to start tracking game statistics and player performance.')).toBeInTheDocument();
-      expect(screen.getByText('Create New Game')).toBeInTheDocument();
+      expect(screen.getByText('Kaikki valmista ensimmäiseen otteluun!')).toBeInTheDocument();
+      expect(screen.getByText('Haluatseesi voit luoda ensimmäisen joukkuesi, turnauksei tai kautesi.')).toBeInTheDocument();
+      expect(screen.getByText('Luo ensimmäinen ottelu')).toBeInTheDocument();
+      expect(screen.getByText('Hallinnoi joukkueita')).toBeInTheDocument();
+      expect(screen.getByText('Luo ensin kausi/turnaus')).toBeInTheDocument();
     });
 
-    it('calls onCreateNewGame and onDismiss when create game button is clicked', async () => {
+    it('calls onCreateGame and onDismiss when create first match button is clicked', async () => {
       const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...propsWithPlayers} />);
+      render(<FirstGameOnboardingOverlay {...phase2Props} />);
       
-      const createButton = screen.getByText('Create New Game');
+      const createButton = screen.getByText('Luo ensimmäinen ottelu');
       await user.click(createButton);
       
-      expect(defaultProps.onCreateNewGame).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onCreateGame).toHaveBeenCalledTimes(1);
       expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onDismiss when maybe later button is clicked', async () => {
+    it('calls onManageTeams and onDismiss when manage teams button is clicked', async () => {
       const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...propsWithPlayers} />);
+      const onManageTeams = jest.fn();
+      render(<FirstGameOnboardingOverlay {...phase2Props} onManageTeams={onManageTeams} />);
       
-      const laterButton = screen.getByText('Maybe later');
-      await user.click(laterButton);
+      const manageButton = screen.getByText('Hallinnoi joukkueita');
+      await user.click(manageButton);
       
+      expect(onManageTeams).toHaveBeenCalledTimes(1);
       expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onManageSeasons and onDismiss when create season/tournament button is clicked', async () => {
+      const user = userEvent.setup();
+      const onManageSeasons = jest.fn();
+      render(<FirstGameOnboardingOverlay {...phase2Props} onManageSeasons={onManageSeasons} />);
+      
+      const seasonButton = screen.getByText('Luo ensin kausi/turnaus');
+      await user.click(seasonButton);
+      
+      expect(onManageSeasons).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Phase 3: Tutorial State', () => {
+    const tutorialProps = { 
+      ...defaultProps, 
+      phase: 'tutorial' as const,
+      tutorialStep: 0,
+      onTutorialNext: jest.fn(),
+      onTutorialPrev: jest.fn(),
+      onTutorialClose: jest.fn()
+    };
+
+    it('renders tutorial content when phase is tutorial', () => {
+      render(<FirstGameOnboardingOverlay {...tutorialProps} />);
+      
+      expect(screen.getByText('Tervetuloa ensimmäiseen otteluusi!')).toBeInTheDocument();
+      expect(screen.getByText('Käydään nopeastit läpi perustoimimat')).toBeInTheDocument();
+      expect(screen.getByText('Pelaajien valinta (yläpalkki)')).toBeInTheDocument();
+      expect(screen.getByText('Takaisin')).toBeInTheDocument();
+      expect(screen.getByText('Seuraava')).toBeInTheDocument();
+    });
+
+    it('shows step indicators in tutorial phase', () => {
+      render(<FirstGameOnboardingOverlay {...tutorialProps} />);
+      
+      // Should have 7 step indicators (dots)
+      const indicators = screen.getAllByRole('generic').filter(el => 
+        el.className.includes('w-2 h-2 rounded-full')
+      );
+      expect(indicators).toHaveLength(7);
+    });
+
+    it('calls onTutorialNext when next button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<FirstGameOnboardingOverlay {...tutorialProps} />);
+      
+      const nextButton = screen.getByText('Seuraava');
+      await user.click(nextButton);
+      
+      expect(tutorialProps.onTutorialNext).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onTutorialPrev when back button is clicked', async () => {
+      const user = userEvent.setup();
+      const propsWithStep = { ...tutorialProps, tutorialStep: 2 };
+      render(<FirstGameOnboardingOverlay {...propsWithStep} />);
+      
+      const backButton = screen.getByText('Takaisin');
+      await user.click(backButton);
+      
+      expect(tutorialProps.onTutorialPrev).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows close button on last tutorial step', () => {
+      const propsWithLastStep = { ...tutorialProps, tutorialStep: 6 };
+      render(<FirstGameOnboardingOverlay {...propsWithLastStep} />);
+      
+      expect(screen.getByText('Valmis!')).toBeInTheDocument();
+    });
+
+    it('does not show close button (X) in tutorial phase', () => {
+      render(<FirstGameOnboardingOverlay {...tutorialProps} />);
+      
+      expect(screen.queryByLabelText('Close')).not.toBeInTheDocument();
     });
   });
 
   describe('Close Functionality', () => {
-    it('calls onDismiss when close button is clicked', async () => {
+    it('calls onDismiss when close button is clicked (non-tutorial phases)', async () => {
       const user = userEvent.setup();
       render(<FirstGameOnboardingOverlay {...defaultProps} />);
       
@@ -125,7 +197,7 @@ describe('FirstGameOnboardingOverlay', () => {
       const user = userEvent.setup();
       render(<FirstGameOnboardingOverlay {...defaultProps} />);
       
-      const title = screen.getByText('Ready to set up your team?');
+      const title = screen.getByText('Valmis aloittamaan?');
       await user.click(title);
       
       expect(defaultProps.onDismiss).not.toHaveBeenCalled();
@@ -144,12 +216,11 @@ describe('FirstGameOnboardingOverlay', () => {
 
     it('manages focus trap with Tab key cycling', async () => {
       const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="no-players" />);
       
       // Get focusable elements
       const closeButton = screen.getByLabelText('Close');
-      const setupButton = screen.getByText('Set Up Team Roster');
-      const skipButton = screen.getByText('Skip for now');
+      const createButton = screen.getByText('Luo kokoonpano');
       
       // Should focus first element initially
       await waitFor(() => {
@@ -158,32 +229,11 @@ describe('FirstGameOnboardingOverlay', () => {
       
       // Tab should move to next element
       await user.keyboard('{Tab}');
-      expect(setupButton).toHaveFocus();
-      
-      // Tab should move to last element
-      await user.keyboard('{Tab}');
-      expect(skipButton).toHaveFocus();
+      expect(createButton).toHaveFocus();
       
       // Tab should cycle back to first element
       await user.keyboard('{Tab}');
       expect(closeButton).toHaveFocus();
-    });
-
-    it('handles Shift+Tab for backwards navigation', async () => {
-      const user = userEvent.setup();
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
-      
-      const closeButton = screen.getByLabelText('Close');
-      const skipButton = screen.getByText('Skip for now');
-      
-      // Start from first element
-      await waitFor(() => {
-        expect(closeButton).toHaveFocus();
-      });
-      
-      // Shift+Tab should cycle to last element
-      await user.keyboard('{Shift>}{Tab}{/Shift}');
-      expect(skipButton).toHaveFocus();
     });
   });
 
@@ -197,9 +247,9 @@ describe('FirstGameOnboardingOverlay', () => {
     });
 
     it('has proper heading structure', () => {
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="no-players" />);
       
-      const heading = screen.getByText('Ready to set up your team?');
+      const heading = screen.getByText('Valmis aloittamaan?');
       expect(heading).toHaveAttribute('id', 'onboarding-title');
       expect(heading.tagName).toBe('H2');
     });
@@ -215,22 +265,35 @@ describe('FirstGameOnboardingOverlay', () => {
   });
 
   describe('Translation Integration', () => {
-    it('uses translation keys with fallbacks', () => {
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={false} />);
+    it('uses phase 1 translation keys with fallbacks', () => {
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="no-players" />);
       
-      expect(mockT).toHaveBeenCalledWith('firstGame.titleNoPlayers', 'Ready to set up your team?');
-      expect(mockT).toHaveBeenCalledWith('firstGame.messageNoPlayers', "Start by adding players to your roster. You'll need at least one player to create a game.");
-      expect(mockT).toHaveBeenCalledWith('firstGame.setupRoster', 'Set Up Team Roster');
-      expect(mockT).toHaveBeenCalledWith('firstGame.skipForNow', 'Skip for now');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase1.title', 'Valmis aloittamaan?');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase1.message', 'Lisää ensin pelaajia, jotta voit luoda ensimmäisen joukkuesi ja ottelusi.');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase1.createRoster', 'Luo kokoonpano');
     });
 
-    it('uses correct translations for has players state', () => {
-      render(<FirstGameOnboardingOverlay {...defaultProps} hasPlayers={true} />);
+    it('uses phase 2 translation keys', () => {
+      render(<FirstGameOnboardingOverlay {...defaultProps} phase="has-players" hasPlayers={true} />);
       
-      expect(mockT).toHaveBeenCalledWith('firstGame.titleHasPlayers', 'Ready to create your first match!');
-      expect(mockT).toHaveBeenCalledWith('firstGame.messageHasPlayers', 'You have players ready! Create your first match to start tracking game statistics and player performance.');
-      expect(mockT).toHaveBeenCalledWith('firstGame.createNewGame', 'Create New Game');
-      expect(mockT).toHaveBeenCalledWith('firstGame.maybeLater', 'Maybe later');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase2.title', 'Kaikki valmista ensimmäiseen otteluun!');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase2.message', 'Haluatseesi voit luoda ensimmäisen joukkuesi, turnauksei tai kautesi.');
+      expect(mockT).toHaveBeenCalledWith('firstGame.phase2.createFirstMatch', 'Luo ensimmäinen ottelu');
+    });
+
+    it('uses tutorial translation keys', () => {
+      const tutorialProps = { 
+        ...defaultProps, 
+        phase: 'tutorial' as const,
+        onTutorialNext: jest.fn(),
+        onTutorialPrev: jest.fn(),
+        onTutorialClose: jest.fn()
+      };
+      render(<FirstGameOnboardingOverlay {...tutorialProps} />);
+      
+      expect(mockT).toHaveBeenCalledWith('firstGame.tutorial.title', 'Tervetuloa ensimmäiseen otteluusi!');
+      expect(mockT).toHaveBeenCalledWith('firstGame.tutorial.subtitle', 'Käydään nopeastit läpi perustoimimat');
+      expect(mockT).toHaveBeenCalledWith('firstGame.tutorial.playerSelection', 'Pelaajien valinta (yläpalkki)');
     });
   });
 

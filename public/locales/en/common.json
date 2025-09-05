@@ -486,14 +486,30 @@
     "noStatsHint": "Save games or create a season to view stats"
   },
   "firstGame": {
-    "titleNoPlayers": "Ready to set up your team?",
-    "titleHasPlayers": "Ready to create your first match!",
-    "messageNoPlayers": "Start by adding players to your roster. You'll need at least one player to create a game.",
-    "messageHasPlayers": "You have players ready! Create your first match to start tracking game statistics and player performance.",
-    "setupRoster": "Set Up Team Roster",
-    "createNewGame": "Create New Game",
-    "skipForNow": "Skip for now",
-    "maybeLater": "Maybe later"
+    "phase1": {
+      "title": "Ready to get started?",
+      "message": "Add players first so you can create your first team and match.",
+      "createRoster": "Create lineup"
+    },
+    "phase2": {
+      "title": "All ready for your first match!",
+      "message": "If you want, you can create your first team, tournament or season.",
+      "createFirstMatch": "Create first match",
+      "manageTeams": "Manage teams", 
+      "createSeasonTournament": "Create season/tournament first"
+    },
+    "tutorial": {
+      "title": "Welcome to your first match!",
+      "subtitle": "Let's quickly go through the basics",
+      "playerSelection": "Player selection (top bar)",
+      "steps": {
+        "selectPlayer": "Tap player disc to activate player",
+        "setGoalie": "When player is selected, press shield icon to set as goalie",
+        "placePlayer": "With player selected, tap field to place player"
+      },
+      "back": "Back",
+      "next": "Next"
+    }
   },
   "seasonTournamentModal": {
     "confirmDelete": "Are you sure you want to delete {{name}}?",
