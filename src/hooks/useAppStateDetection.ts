@@ -79,10 +79,24 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
     try {
       logger.debug('[useAppStateDetection] Starting state detection check');
       
-      // Small delay for auth stabilization (from original useResumeAvailability pattern)
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Remove unnecessary delay - modern auth systems are stable
 
-      // Check all data sources in parallel for better performance
+      // Helper function to add timeout to prevent hanging on Supabase calls with cleanup
+      const withTimeout = <T>(promise: Promise<T>, timeoutMs = 3000, fallback: T): Promise<T> => {
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<T>((resolve) => {
+          timeoutId = setTimeout(() => resolve(fallback), timeoutMs);
+        });
+
+        return Promise.race([
+          promise.finally(() => {
+            if (timeoutId) clearTimeout(timeoutId);
+          }),
+          timeoutPromise
+        ]);
+      };
+
+      // Check all data sources in parallel with timeouts to prevent hanging
       const [
         masterRoster,
         savedGames,
@@ -91,12 +105,12 @@ export function useAppStateDetection(user: unknown): AppStateDetection {
         currentGameId,
         mostRecentGameId,
       ] = await Promise.all([
-        getMasterRoster().catch(() => []),
-        getSavedGames().catch(() => ({})),
-        storageManager.getSeasons().catch(() => []),
-        storageManager.getTournaments().catch(() => []),
-        getCurrentGameIdSetting().catch(() => null),
-        getMostRecentGameId().catch(() => null),
+        withTimeout(getMasterRoster().catch(() => []), 3000, []),
+        withTimeout(getSavedGames().catch(() => ({})), 3000, {}),
+        withTimeout(storageManager.getSeasons().catch(() => []), 3000, []),
+        withTimeout(storageManager.getTournaments().catch(() => []), 3000, []),
+        withTimeout(getCurrentGameIdSetting().catch(() => null), 3000, null),
+        withTimeout(getMostRecentGameId().catch(() => null), 3000, null),
       ]);
 
       // Calculate detection state

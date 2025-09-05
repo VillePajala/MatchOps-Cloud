@@ -475,10 +475,15 @@
     "loadGame": "Load Game",
     "createSeasonTournament": "Create Season/Tournament",
     "viewStats": "View Stats",
+    "getStarted": "Get Started",
+    "howItWorks": "How It Works",
     "tagline": "Plan • Track • Debrief",
     "languageLabel": "Language",
     "languageEnglish": "English",
-    "languageFinnish": "Finnish"
+    "languageFinnish": "Finnish",
+    "noPlayersHint": "Add players first to enable this option",
+    "noSavedGamesHint": "No saved games available",
+    "noStatsHint": "Save games or create a season to view stats"
   },
   "seasonTournamentModal": {
     "confirmDelete": "Are you sure you want to delete {{name}}?",

@@ -8,23 +8,41 @@ import {
   getAppSettings,
 } from '@/utils/appSettings';
 import { AuthModal } from '@/components/auth/AuthModal';
+import dynamic from 'next/dynamic';
 import { HiOutlineArrowRightOnRectangle, HiOutlineUserPlus, HiCheck } from 'react-icons/hi2';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import logger from '@/utils/logger';
 
+const InstructionsModal = dynamic(
+  () => import('@/components/InstructionsModal').catch(() => ({
+    default: () => <div className="text-red-400">Failed to load instructions. Please refresh the page.</div>
+  })), 
+  {
+    ssr: false,
+    loading: () => <div className="text-slate-300 text-center p-4">Loading instructions...</div>,
+  }
+);
+
 interface StartScreenProps {
+  // Action handlers
   onStartNewGame: () => void;
   onLoadGame: () => void;
   onResumeGame?: () => void;
   onCreateSeason: () => void;
   onViewStats: () => void;
-  canResume?: boolean;
+  
+  // Authentication state
   isAuthenticated?: boolean;
+  
+  // User experience state
+  isFirstTimeUser?: boolean;
+  canResume?: boolean;
+  
+  // Data availability state (determines button enabled/disabled state)
   hasPlayers?: boolean;
   hasSavedGames?: boolean;
   hasSeasonsTournaments?: boolean;
-  isFirstTimeUser?: boolean;
 }
 
 const StartScreen: React.FC<StartScreenProps> = ({
@@ -35,10 +53,10 @@ const StartScreen: React.FC<StartScreenProps> = ({
   onViewStats,
   canResume = false,
   isAuthenticated = false,
-  hasPlayers: _hasPlayers = false,
-  hasSavedGames: _hasSavedGames = false,
-  hasSeasonsTournaments: _hasSeasonsTournaments = false,
-  isFirstTimeUser: _isFirstTimeUser = true,
+  hasPlayers: hasPlayersData = false,
+  hasSavedGames: hasSavedGamesData = false,
+  hasSeasonsTournaments: hasSeasonsTournamentsData = false,
+  isFirstTimeUser: isFirstTimeUserState = true,
 }) => {
   const { t } = useTranslation();
   const { signOut } = useAuth();
@@ -46,6 +64,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const didInitializeLanguageRef = useRef<boolean>(false);
 
@@ -106,6 +125,134 @@ const StartScreen: React.FC<StartScreenProps> = ({
   const titleStyle =
     'text-6xl sm:text-7xl lg:text-9xl font-extrabold tracking-tight leading-tight drop-shadow-lg mb-2 text-center';
 
+  const renderAuthButtons = () => (
+    <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
+      <Button
+        className={buttonFull}
+        variant="primary"
+        onClick={() => {
+          setAuthModalMode('signin');
+          setShowAuthModal(true);
+        }}
+      >
+        <span className="flex items-center justify-center w-full">
+          <span className="w-6 text-left">
+            <HiOutlineArrowRightOnRectangle className="w-4 sm:w-5 h-4 sm:h-5" />
+          </span>
+          <span className="flex-1 text-center">{t('auth.signIn')}</span>
+          <span className="w-6" />
+        </span>
+      </Button>
+      <Button
+        className={buttonFull}
+        variant="secondary"
+        onClick={() => {
+          setAuthModalMode('signup');
+          setShowAuthModal(true);
+        }}
+      >
+        <span className="flex items-center justify-center w-full">
+          <span className="w-6 text-left">
+            <HiOutlineUserPlus className="w-4 sm:w-5 h-4 sm:h-5" />
+          </span>
+          <span className="flex-1 text-center">{t('auth.signUp')}</span>
+          <span className="w-6" />
+        </span>
+      </Button>
+    </div>
+  );
+
+  const renderOnboardingButtons = () => (
+    <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
+      <Button className={buttonFull} variant="primary" onClick={onStartNewGame}>
+        {t('startScreen.getStarted', 'Get Started')}
+      </Button>
+      <Button
+        className={buttonFull}
+        variant="secondary"
+        onClick={() => setShowInstructions(true)}
+      >
+        {t('startScreen.howItWorks', 'How It Works')}
+      </Button>
+    </div>
+  );
+
+  const renderExperiencedUserButtons = () => {
+    logger.debug('[StartScreen] Render: canResume =', canResume, 'onResumeGame =', !!onResumeGame);
+    
+    return (
+      <div className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-h-[60vh] sm:max-h-none overflow-y-auto">
+        {canResume && onResumeGame && (
+          <Button className={buttonFull} variant="primary" onClick={onResumeGame}>
+            {t('startScreen.resumeGame', 'Resume Last Game')}
+          </Button>
+        )}
+        <Button
+          className={buttonFull}
+          variant="primary"
+          onClick={onStartNewGame}
+          disabled={!hasPlayersData}
+          title={!hasPlayersData ? t('startScreen.noPlayersHint', 'Add players to start a game') : undefined}
+        >
+          {t('startScreen.startNewGame', 'Start New Game')}
+        </Button>
+        <Button
+          className={buttonFull}
+          variant="secondary"
+          onClick={onLoadGame}
+          disabled={!hasSavedGamesData}
+          title={!hasSavedGamesData ? t('startScreen.noSavedGamesHint', 'No saved games available') : undefined}
+        >
+          {t('startScreen.loadGame', 'Load Game')}
+        </Button>
+        <Button
+          className={buttonFull}
+          variant="secondary"
+          onClick={onCreateSeason}
+          disabled={!hasPlayersData}
+          title={!hasPlayersData ? t('startScreen.noPlayersHint', 'Add players to create a season') : undefined}
+        >
+          {t('startScreen.createSeasonTournament', 'Create Season/Tournament')}
+        </Button>
+        <Button
+          className={buttonFull}
+          variant="secondary"
+          onClick={onViewStats}
+          disabled={!(hasSeasonsTournamentsData || hasSavedGamesData)}
+          title={!(hasSeasonsTournamentsData || hasSavedGamesData)
+            ? t('startScreen.noStatsHint', 'Save games or create a season to view stats')
+            : undefined}
+        >
+          {t('startScreen.viewStats', 'View Stats')}
+        </Button>
+        <Button
+          className={buttonFull}
+          variant="destructive"
+          onClick={signOut}
+        >
+          <span className="flex items-center justify-center w-full">
+            <span className="w-6 text-left">
+              <HiOutlineArrowRightOnRectangle className="w-4 sm:w-5 h-4 sm:h-5 rotate-180" />
+            </span>
+            <span className="flex-1 text-center">{t('auth.signOut')}</span>
+            <span className="w-6" />
+          </span>
+        </Button>
+      </div>
+    );
+  };
+
+  const renderButtons = () => {
+    if (!isAuthenticated) {
+      return renderAuthButtons();
+    }
+    
+    if (isFirstTimeUserState) {
+      return renderOnboardingButtons();
+    }
+    
+    return renderExperiencedUserButtons();
+  };
 
   return (
     <div className={containerStyle}>
@@ -148,78 +295,7 @@ const StartScreen: React.FC<StartScreenProps> = ({
         <div className="h-px w-44 sm:w-64 bg-gradient-to-r from-transparent via-sky-400/70 to-transparent mx-auto mt-6 sm:mt-8 mb-8 sm:mb-12" />
 
         {/* Show different content based on auth state */}
-        {!isAuthenticated ? (
-          <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
-            <Button
-              className={buttonFull}
-              variant="primary"
-              onClick={() => {
-                setAuthModalMode('signin');
-                setShowAuthModal(true);
-              }}
-            >
-              <span className="flex items-center justify-center w-full">
-                <span className="w-6 text-left">
-                  <HiOutlineArrowRightOnRectangle className="w-4 sm:w-5 h-4 sm:h-5" />
-                </span>
-                <span className="flex-1 text-center">{t('auth.signIn')}</span>
-                <span className="w-6" />
-              </span>
-            </Button>
-            <Button
-              className={buttonFull}
-              variant="secondary"
-              onClick={() => {
-                setAuthModalMode('signup');
-                setShowAuthModal(true);
-              }}
-            >
-              <span className="flex items-center justify-center w-full">
-                <span className="w-6 text-left">
-                  <HiOutlineUserPlus className="w-4 sm:w-5 h-4 sm:h-5" />
-                </span>
-                <span className="flex-1 text-center">{t('auth.signUp')}</span>
-                <span className="w-6" />
-              </span>
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center space-y-3 sm:space-y-4 w-full max-h-[60vh] sm:max-h-none overflow-y-auto">
-            {(() => {
-              logger.debug('[StartScreen] Render: canResume =', canResume, 'onResumeGame =', !!onResumeGame);
-              return canResume && onResumeGame ? (
-                <Button className={buttonFull} variant="primary" onClick={onResumeGame}>
-                  {t('startScreen.resumeGame', 'Resume Last Game')}
-                </Button>
-              ) : null;
-            })()}
-            <Button className={buttonFull} variant="primary" onClick={onStartNewGame}>
-              {t('startScreen.startNewGame', 'Start New Game')}
-            </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onLoadGame}>
-              {t('startScreen.loadGame', 'Load Game')}
-            </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onCreateSeason}>
-              {t('startScreen.createSeasonTournament', 'Create Season/Tournament')}
-            </Button>
-            <Button className={buttonFull} variant="secondary" onClick={onViewStats}>
-              {t('startScreen.viewStats', 'View Stats')}
-            </Button>
-            <Button
-              className={buttonFull}
-              variant="destructive"
-              onClick={signOut}
-            >
-              <span className="flex items-center justify-center w-full">
-                <span className="w-6 text-left">
-                  <HiOutlineArrowRightOnRectangle className="w-4 sm:w-5 h-4 sm:h-5 rotate-180" />
-                </span>
-                <span className="flex-1 text-center">{t('auth.signOut')}</span>
-                <span className="w-6" />
-              </span>
-            </Button>
-          </div>
-        )}
+        {renderButtons()}
       </div>
 
       {/* Success toast notification - positioned in top area */}
@@ -238,6 +314,11 @@ const StartScreen: React.FC<StartScreenProps> = ({
           defaultMode={authModalMode}
         />
       )}
+
+      <InstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
+      />
 
       <div className="absolute left-1/2 -translate-x-1/2 z-20 flex items-center bottom-8 md:bottom-6">
         <div className="flex rounded-lg bg-slate-800/70 border border-slate-600 backdrop-blur-sm overflow-hidden">
