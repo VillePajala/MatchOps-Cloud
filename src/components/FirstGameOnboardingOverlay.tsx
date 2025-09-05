@@ -6,9 +6,7 @@ import Button from '@/components/ui/Button';
 import { HiOutlineUsers, HiOutlinePlayCircle, HiOutlineXMark } from 'react-icons/hi2';
 
 // Constants for maintainability
-const Z_INDEX_ONBOARDING = 70;
 const FOCUSABLE_SELECTOR = '[data-onboarding-overlay] button, [data-onboarding-overlay] [tabindex]:not([tabindex="-1"])';
-const ANIMATION_DURATION = 300;
 
 interface FirstGameOnboardingOverlayProps {
   hasPlayers: boolean;
@@ -26,10 +24,6 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
   isVisible,
 }) => {
   const { t } = useTranslation();
-
-  if (!isVisible) {
-    return null;
-  }
 
   // Handle backdrop click to dismiss
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -61,6 +55,10 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
       };
     }
   }, [isVisible, onDismiss]);
+
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div
