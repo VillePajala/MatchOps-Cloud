@@ -615,9 +615,9 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     let timer: NodeJS.Timeout | null = null;
     
     const checkOnboardingStatus = async () => {
-      // Only show onboarding overlay for first-time users who haven't completed or dismissed it
-      if (appStateDetection?.isFirstTimeUser && !showLargeTimerOverlay) {
-        try {
+      try {
+        // Only show onboarding overlay for first-time users who haven't completed or dismissed it
+        if (appStateDetection?.isFirstTimeUser && !showLargeTimerOverlay) {
           const settings = await getAppSettings();
           
           // Don't show if already completed or permanently dismissed
@@ -629,9 +629,10 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
           timer = setTimeout(() => {
             setShowFirstGameOnboarding(true);
           }, ONBOARDING_DISPLAY_DELAY);
-        } catch (error) {
-          logger.error('Error checking onboarding status:', error);
         }
+      } catch (error) {
+        logger.error('Error in onboarding status check:', error);
+        // Fail gracefully - don't show onboarding on error
       }
     };
     
@@ -641,9 +642,10 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     return () => {
       if (timer) {
         clearTimeout(timer);
+        timer = null; // Explicit nullification
       }
     };
-  }, [appStateDetection?.isFirstTimeUser, showLargeTimerOverlay]);
+  }, [appStateDetection?.isFirstTimeUser, showLargeTimerOverlay, showFirstGameOnboarding]);
 
   // --- Modal States handled via context ---
 

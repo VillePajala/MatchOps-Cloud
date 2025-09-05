@@ -32,16 +32,36 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
     }
   };
 
-  // Handle escape key and focus management
+  // Handle escape key and focus management with Tab cycling
   React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onDismiss();
+      } else if (e.key === 'Tab') {
+        // Implement focus cycling within the modal
+        const focusableElements = document.querySelectorAll(FOCUSABLE_SELECTOR);
+        const focusableArray = Array.from(focusableElements) as HTMLElement[];
+        
+        if (focusableArray.length === 0) return;
+        
+        const currentFocusIndex = focusableArray.findIndex(el => el === document.activeElement);
+        
+        if (e.shiftKey) {
+          // Shift+Tab - move backwards
+          const prevIndex = currentFocusIndex <= 0 ? focusableArray.length - 1 : currentFocusIndex - 1;
+          focusableArray[prevIndex]?.focus();
+        } else {
+          // Tab - move forwards
+          const nextIndex = currentFocusIndex >= focusableArray.length - 1 ? 0 : currentFocusIndex + 1;
+          focusableArray[nextIndex]?.focus();
+        }
+        
+        e.preventDefault();
       }
     };
 
     if (isVisible) {
-      document.addEventListener('keydown', handleEscape);
+      document.addEventListener('keydown', handleKeyDown);
       
       // Focus trap - focus the first interactive element
       const focusableElements = document.querySelectorAll(FOCUSABLE_SELECTOR);
@@ -51,7 +71,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
       }
       
       return () => {
-        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }
   }, [isVisible, onDismiss]);
