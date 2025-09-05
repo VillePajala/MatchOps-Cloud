@@ -485,6 +485,16 @@
     "noSavedGamesHint": "No saved games available",
     "noStatsHint": "Save games or create a season to view stats"
   },
+  "firstGame": {
+    "titleNoPlayers": "Ready to set up your team?",
+    "titleHasPlayers": "Ready to create your first match!",
+    "messageNoPlayers": "Start by adding players to your roster. You'll need at least one player to create a game.",
+    "messageHasPlayers": "You have players ready! Create your first match to start tracking game statistics and player performance.",
+    "setupRoster": "Set Up Team Roster",
+    "createNewGame": "Create New Game",
+    "skipForNow": "Skip for now",
+    "maybeLater": "Maybe later"
+  },
   "seasonTournamentModal": {
     "confirmDelete": "Are you sure you want to delete {{name}}?",
     "newSeasonPlaceholder": "Enter new season name...",

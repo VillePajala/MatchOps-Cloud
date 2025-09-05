@@ -20,6 +20,7 @@ import SettingsModal from '@/components/SettingsModal';
 import SeasonTournamentManagementModal from '@/components/SeasonTournamentManagementModal';
 import InstructionsModal from '@/components/InstructionsModal';
 import PlayerAssessmentModal from '@/components/PlayerAssessmentModal';
+import FirstGameOnboardingOverlay from '@/components/FirstGameOnboardingOverlay';
 // PHASE 2: Progressive rendering components  
 import { GameLoadingSkeleton } from '@/components/Skeleton';
 
@@ -61,6 +62,8 @@ import {
   // getHasSeenAppGuide, // Unused - app guide disabled
   saveHasSeenAppGuide,
   getLastHomeTeamName as utilGetLastHomeTeamName,
+  getAppSettings,
+  updateAppSettings,
 } from '@/utils/appSettings';
 // Removed - now handled by useGameDataManager:
 // import { deleteSeason as utilDeleteSeason, updateSeason as utilUpdateSeason, addSeason as utilAddSeason } from '@/utils/seasons';
@@ -510,6 +513,9 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
   // --- Timer State (Still needed here) ---
   const [showLargeTimerOverlay, setShowLargeTimerOverlay] = useState<boolean>(false); // State for overlay visibility
   const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState<boolean>(false);
+  
+  // --- First Game Onboarding Overlay State ---
+  const [showFirstGameOnboarding, setShowFirstGameOnboarding] = useState<boolean>(false);
 
   // Helper function to validate new game creation
   const validateNewGameCreation = useCallback((): boolean => {
@@ -531,6 +537,39 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     
     return true; // Allow game creation
   }, [appStateDetection, t, rosterSettingsModal]);
+
+  // --- First Game Onboarding Handlers ---
+  const handleOnboardingSetupRoster = useCallback(async () => {
+    // Mark as completed when user takes action to add players
+    try {
+      await updateAppSettings({ firstGameOnboardingCompleted: true });
+    } catch (error) {
+      logger.error('Error updating onboarding completion status:', error);
+    }
+    rosterSettingsModal.open();
+  }, [rosterSettingsModal]);
+
+  const handleOnboardingCreateNewGame = useCallback(async () => {
+    // Mark as completed when user takes action to create game
+    try {
+      await updateAppSettings({ firstGameOnboardingCompleted: true });
+    } catch (error) {
+      logger.error('Error updating onboarding completion status:', error);
+    }
+    if (validateNewGameCreation()) {
+      newGameSetupModal.open();
+    }
+  }, [validateNewGameCreation, newGameSetupModal]);
+
+  const handleOnboardingDismiss = useCallback(async () => {
+    // Mark as dismissed (can show again if user state changes)
+    try {
+      await updateAppSettings({ firstGameOnboardingDismissed: true });
+    } catch (error) {
+      logger.error('Error updating onboarding dismissal status:', error);
+    }
+    setShowFirstGameOnboarding(false);
+  }, []);
 
   const hasHandledInitialActionRef = useRef(false);
   useEffect(() => {
@@ -566,6 +605,34 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     seasonTournamentModal,
     gameStatsModal
   ]);
+
+  // --- First Game Onboarding Logic ---
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      // Only show onboarding overlay for first-time users who haven't completed or dismissed it
+      if (appStateDetection?.isFirstTimeUser && !showLargeTimerOverlay) {
+        try {
+          const settings = await getAppSettings();
+          
+          // Don't show if already completed or permanently dismissed
+          if (settings.firstGameOnboardingCompleted || settings.firstGameOnboardingDismissed) {
+            return;
+          }
+          
+          // Small delay to allow the main interface to render first
+          const timer = setTimeout(() => {
+            setShowFirstGameOnboarding(true);
+          }, 1000);
+          
+          return () => clearTimeout(timer);
+        } catch (error) {
+          logger.error('Error checking onboarding status:', error);
+        }
+      }
+    };
+    
+    checkOnboardingStatus();
+  }, [appStateDetection?.isFirstTimeUser, showLargeTimerOverlay]);
 
   // --- Modal States handled via context ---
 
@@ -2365,6 +2432,17 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
               />
             </GameErrorBoundary>
             {/* Other components that might overlay or interact with the field */}
+            
+            {/* First Game Onboarding Overlay */}
+            {showFirstGameOnboarding && (
+              <FirstGameOnboardingOverlay
+                hasPlayers={appStateDetection?.hasPlayers ?? false}
+                onSetupRoster={handleOnboardingSetupRoster}
+                onCreateNewGame={handleOnboardingCreateNewGame}
+                onDismiss={handleOnboardingDismiss}
+                isVisible={showFirstGameOnboarding}
+              />
+            )}
           </>
         )}
       </div>

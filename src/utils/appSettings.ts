@@ -21,6 +21,9 @@ export interface AppSettings {
   // Session/Security settings
   deviceFingerprint?: string;
   sessionActivity?: Record<string, unknown>;
+  // Onboarding settings
+  firstGameOnboardingCompleted?: boolean;
+  firstGameOnboardingDismissed?: boolean;
 }
 
 /**
@@ -44,6 +47,9 @@ const DEFAULT_APP_SETTINGS: AppSettings = {
   // Session/Security defaults
   deviceFingerprint: undefined,
   sessionActivity: {},
+  // Onboarding defaults
+  firstGameOnboardingCompleted: false,
+  firstGameOnboardingDismissed: false,
 };
 
 /**

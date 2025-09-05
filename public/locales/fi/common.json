@@ -398,6 +398,16 @@
     "noSavedGamesHint": "Ei tallennettuja pelejä",
     "noStatsHint": "Tallenna pelejä tai luo kausi nähdäksesi tilastot"
   },
+  "firstGame": {
+    "titleNoPlayers": "Valmis perustamaan joukkueesi?",
+    "titleHasPlayers": "Valmis luomaan ensimmäisen ottelun!",
+    "messageNoPlayers": "Aloita lisäämällä pelaajia rosteriin. Tarvitset vähintään yhden pelaajan luodaksesi pelin.",
+    "messageHasPlayers": "Pelaajat ovat valmiina! Luo ensimmäinen ottelu aloittaaksesi pelin tilastojen ja pelaajien suorituskyvyn seurannan.",
+    "setupRoster": "Perusta joukkue",
+    "createNewGame": "Luo uusi peli",
+    "skipForNow": "Ohita toistaiseksi",
+    "maybeLater": "Ehkä myöhemmin"
+  },
   "seasonTournamentModal": {
     "confirmDelete": "Haluatko varmasti poistaa {{name}}?",
     "newSeasonPlaceholder": "Anna uuden kauden nimi...",
