@@ -6,14 +6,11 @@ import Button from '@/components/ui/Button';
 import { HiOutlineUsers, HiOutlinePlayCircle, HiOutlineXMark, HiOutlineTrophy } from 'react-icons/hi2';
 
 // Constants for maintainability
-const FOCUSABLE_SELECTOR = '[data-onboarding-overlay] button, [data-onboarding-overlay] [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE_SELECTOR = 'button, [tabindex]:not([tabindex="-1"])';
 
 interface FirstGameOnboardingOverlayProps {
   phase: 'no-players' | 'has-players' | 'tutorial';
   hasPlayers: boolean;
-  hasTeams?: boolean;
-  hasSeasons?: boolean;
-  hasTournaments?: boolean;
   onCreateRoster: () => void;
   onCreateGame: () => void;
   onManageTeams?: () => void;
@@ -22,6 +19,7 @@ interface FirstGameOnboardingOverlayProps {
   isVisible: boolean;
   // Tutorial phase specific
   tutorialStep?: number;
+  tutorialStepCount?: number;
   onTutorialNext?: () => void;
   onTutorialPrev?: () => void;
   onTutorialClose?: () => void;
@@ -30,9 +28,6 @@ interface FirstGameOnboardingOverlayProps {
 const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = memo(({
   phase,
   hasPlayers: _hasPlayers,
-  hasTeams: _hasTeams = false,
-  hasSeasons: _hasSeasons = false,
-  hasTournaments: _hasTournaments = false,
   onCreateRoster,
   onCreateGame,
   onManageTeams,
@@ -40,6 +35,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
   onDismiss,
   isVisible,
   tutorialStep = 0,
+  tutorialStepCount = 7,
   onTutorialNext,
   onTutorialPrev,
   onTutorialClose,
@@ -53,15 +49,18 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
     }
   };
 
+  // Cache focusable elements for performance
+  const focusableElementsRef = React.useRef<HTMLElement[]>([]);
+  const overlayElementRef = React.useRef<HTMLElement | null>(null);
+
   // Handle escape key and focus management with Tab cycling
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onDismiss();
       } else if (e.key === 'Tab') {
-        // Implement focus cycling within the modal
-        const focusableElements = document.querySelectorAll(FOCUSABLE_SELECTOR);
-        const focusableArray = Array.from(focusableElements) as HTMLElement[];
+        // Use cached focusable elements if available
+        const focusableArray = focusableElementsRef.current;
         
         if (focusableArray.length === 0) return;
         
@@ -84,18 +83,27 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
     if (isVisible) {
       document.addEventListener('keydown', handleKeyDown);
       
-      // Focus trap - focus the first interactive element
-      const focusableElements = document.querySelectorAll(FOCUSABLE_SELECTOR);
-      const firstElement = focusableElements[0] as HTMLElement;
-      if (firstElement) {
-        firstElement.focus();
+      // Cache focusable elements and focus the first one
+      const overlayElement = document.querySelector('[data-onboarding-overlay]') as HTMLElement;
+      if (overlayElement) {
+        overlayElementRef.current = overlayElement;
+        const focusableElements = overlayElement.querySelectorAll(FOCUSABLE_SELECTOR);
+        focusableElementsRef.current = Array.from(focusableElements) as HTMLElement[];
+        
+        const firstElement = focusableElementsRef.current[0];
+        if (firstElement) {
+          firstElement.focus();
+        }
       }
       
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
+        // Clear cache when component becomes invisible
+        focusableElementsRef.current = [];
+        overlayElementRef.current = null;
       };
     }
-  }, [isVisible, onDismiss]);
+  }, [isVisible, onDismiss, phase, tutorialStep]);
 
   if (!isVisible) {
     return null;
@@ -226,7 +234,7 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
         </button>
         
         <div className="flex gap-1">
-          {Array.from({ length: 7 }).map((_, i) => (
+          {Array.from({ length: tutorialStepCount }).map((_, i) => (
             <div 
               key={i}
               className={`w-2 h-2 rounded-full ${
@@ -237,10 +245,10 @@ const FirstGameOnboardingOverlay: React.FC<FirstGameOnboardingOverlayProps> = me
         </div>
         
         <button 
-          onClick={tutorialStep === 6 ? onTutorialClose : onTutorialNext}
+          onClick={tutorialStep === tutorialStepCount - 1 ? onTutorialClose : onTutorialNext}
           className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
         >
-          {tutorialStep === 6 ? 'Valmis!' : t('firstGame.tutorial.next', 'Seuraava')}
+          {tutorialStep === tutorialStepCount - 1 ? 'Valmis!' : t('firstGame.tutorial.next', 'Seuraava')}
         </button>
       </div>
     </div>
