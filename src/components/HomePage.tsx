@@ -20,6 +20,8 @@ import SettingsModal from '@/components/SettingsModal';
 import SeasonTournamentManagementModal from '@/components/SeasonTournamentManagementModal';
 import InstructionsModal from '@/components/InstructionsModal';
 import PlayerAssessmentModal from '@/components/PlayerAssessmentModal';
+import FirstGameOnboardingOverlay from '@/components/FirstGameOnboardingOverlay';
+import ErrorBoundary from '@/components/ErrorBoundary';
 // PHASE 2: Progressive rendering components  
 import { GameLoadingSkeleton } from '@/components/Skeleton';
 
@@ -61,6 +63,8 @@ import {
   // getHasSeenAppGuide, // Unused - app guide disabled
   saveHasSeenAppGuide,
   getLastHomeTeamName as utilGetLastHomeTeamName,
+  getAppSettings,
+  updateAppSettings,
 } from '@/utils/appSettings';
 // Removed - now handled by useGameDataManager:
 // import { deleteSeason as utilDeleteSeason, updateSeason as utilUpdateSeason, addSeason as utilAddSeason } from '@/utils/seasons';
@@ -510,6 +514,14 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
   // --- Timer State (Still needed here) ---
   const [showLargeTimerOverlay, setShowLargeTimerOverlay] = useState<boolean>(false); // State for overlay visibility
   const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState<boolean>(false);
+  
+  // --- First Game Onboarding Overlay State (Three-Phase System) ---
+  const [showFirstGameOnboarding, setShowFirstGameOnboarding] = useState<boolean>(false);
+  const [onboardingPhase, setOnboardingPhase] = useState<'no-players' | 'has-players' | 'tutorial'>('no-players');
+  const [tutorialStep, setTutorialStep] = useState<number>(0);
+
+  // Constants for onboarding configuration
+  const ONBOARDING_DISPLAY_DELAY = 1000; // ms delay before showing overlay
 
   // Helper function to validate new game creation
   const validateNewGameCreation = useCallback((): boolean => {
@@ -531,6 +543,67 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     
     return true; // Allow game creation
   }, [appStateDetection, t, rosterSettingsModal]);
+
+  // --- First Game Onboarding Handlers (Three-Phase System) ---
+  const handleOnboardingCreateRoster = useCallback(async () => {
+    // Mark phase 1 as completed when user takes action to add players
+    try {
+      await updateAppSettings({ firstGameOnboardingPhase1Completed: true });
+    } catch (error) {
+      logger.error('Error updating onboarding phase 1 completion:', error);
+    }
+    rosterSettingsModal.open();
+  }, [rosterSettingsModal]);
+
+  const handleOnboardingCreateGame = useCallback(async () => {
+    // Mark phase 2 as completed when user creates first game
+    try {
+      await updateAppSettings({ firstGameOnboardingPhase2Completed: true });
+    } catch (error) {
+      logger.error('Error updating onboarding phase 2 completion:', error);
+    }
+    if (validateNewGameCreation()) {
+      newGameSetupModal.open();
+    }
+  }, [validateNewGameCreation, newGameSetupModal]);
+
+  const handleOnboardingManageTeams = useCallback(() => {
+    // Open team management modal (this would need to be implemented)
+    logger.info('Team management requested from onboarding');
+    // TODO: Implement team management modal
+  }, []);
+
+  const handleOnboardingManageSeasons = useCallback(() => {
+    // Open season/tournament management
+    seasonTournamentModal.open();
+  }, [seasonTournamentModal]);
+
+  // Tutorial handlers
+  const handleTutorialNext = useCallback(() => {
+    if (tutorialStep < 6) {
+      setTutorialStep(prev => prev + 1);
+    }
+  }, [tutorialStep]);
+
+  const handleTutorialPrev = useCallback(() => {
+    if (tutorialStep > 0) {
+      setTutorialStep(prev => prev - 1);
+    }
+  }, [tutorialStep]);
+
+  const handleTutorialClose = useCallback(async () => {
+    try {
+      await updateAppSettings({ firstGameTutorialCompleted: true });
+    } catch (error) {
+      logger.error('Error updating tutorial completion:', error);
+    }
+    setShowFirstGameOnboarding(false);
+    setTutorialStep(0);
+  }, []);
+
+  const handleOnboardingDismiss = useCallback(() => {
+    setShowFirstGameOnboarding(false);
+  }, []);
 
   const hasHandledInitialActionRef = useRef(false);
   useEffect(() => {
@@ -566,6 +639,78 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
     seasonTournamentModal,
     gameStatsModal
   ]);
+
+  // --- First Game Onboarding Logic (Three-Phase System) ---
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    
+    const checkOnboardingStatus = async () => {
+      try {
+        // Only show onboarding for first-time users when not showing large timer
+        if (appStateDetection?.isFirstTimeUser && !showLargeTimerOverlay) {
+          const settings = await getAppSettings();
+          
+          // Determine which phase to show based on user state and completion
+          let shouldShowPhase: 'no-players' | 'has-players' | null = null;
+          
+          // Phase 1: No players - show if user has no players and hasn't completed phase 1
+          if (!appStateDetection.hasPlayers && !settings.firstGameOnboardingPhase1Completed) {
+            shouldShowPhase = 'no-players';
+          }
+          // Phase 2: Has players but no games - show if has players but no saved games and hasn't completed phase 2
+          else if (appStateDetection.hasPlayers && !appStateDetection.hasSavedGames && !settings.firstGameOnboardingPhase2Completed) {
+            shouldShowPhase = 'has-players';
+          }
+          
+          if (shouldShowPhase) {
+            setOnboardingPhase(shouldShowPhase);
+            // Small delay to allow the main interface to render first
+            timer = setTimeout(() => {
+              setShowFirstGameOnboarding(true);
+            }, ONBOARDING_DISPLAY_DELAY);
+          }
+        }
+      } catch (error) {
+        logger.error('Error in onboarding status check:', error);
+        // Fail gracefully - don't show onboarding on error
+      }
+    };
+    
+    checkOnboardingStatus();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null; // Explicit nullification
+      }
+    };
+  }, [appStateDetection?.isFirstTimeUser, appStateDetection?.hasPlayers, appStateDetection?.hasSavedGames, showLargeTimerOverlay]);
+  
+  // Tutorial phase logic - show when entering first real game
+  useEffect(() => {
+    const checkTutorialStatus = async () => {
+      try {
+        // Show tutorial when user enters their first actual game (not default workspace)
+        if (currentGameId && currentGameId !== 'unsaved_game') {
+          const settings = await getAppSettings();
+          
+          // Show tutorial if they haven't seen it and have completed onboarding phases
+          if (!settings.firstGameTutorialCompleted && 
+              settings.firstGameOnboardingPhase1Completed && 
+              settings.firstGameOnboardingPhase2Completed) {
+            
+            setOnboardingPhase('tutorial');
+            setShowFirstGameOnboarding(true);
+          }
+        }
+      } catch (error) {
+        logger.error('Error checking tutorial status:', error);
+      }
+    };
+    
+    checkTutorialStatus();
+  }, [currentGameId]);
 
   // --- Modal States handled via context ---
 
@@ -2365,6 +2510,37 @@ function HomePage({ initialAction, skipInitialSetup = false, appStateDetection }
               />
             </GameErrorBoundary>
             {/* Other components that might overlay or interact with the field */}
+            
+            {/* First Game Onboarding Overlay */}
+            {showFirstGameOnboarding && (
+              <ErrorBoundary
+                fallback={
+                  <div className="absolute inset-0 flex items-center justify-center z-[70] bg-black/40">
+                    <div className="bg-slate-800 rounded-lg p-4 text-slate-200">
+                      Failed to load onboarding overlay
+                    </div>
+                  </div>
+                }
+              >
+                <FirstGameOnboardingOverlay
+                  phase={onboardingPhase}
+                  hasPlayers={appStateDetection?.hasPlayers ?? false}
+                  hasTeams={false} // TODO: Add team detection when teams feature is implemented
+                  hasSeasons={false} // TODO: Add season detection
+                  hasTournaments={false} // TODO: Add tournament detection
+                  onCreateRoster={handleOnboardingCreateRoster}
+                  onCreateGame={handleOnboardingCreateGame}
+                  onManageTeams={handleOnboardingManageTeams}
+                  onManageSeasons={handleOnboardingManageSeasons}
+                  onDismiss={handleOnboardingDismiss}
+                  isVisible={showFirstGameOnboarding}
+                  tutorialStep={tutorialStep}
+                  onTutorialNext={handleTutorialNext}
+                  onTutorialPrev={handleTutorialPrev}
+                  onTutorialClose={handleTutorialClose}
+                />
+              </ErrorBoundary>
+            )}
           </>
         )}
       </div>
